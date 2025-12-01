@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Directus
+  postgres:
+    image: postgres:15-alpine
+    container_name: gso-postgres
+    environment:
+      POSTGRES_USER: directus
+      POSTGRES_PASSWORD: directus
+      POSTGRES_DB: directus
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U directus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Directus CMS
+  directus:
+    image: directus/directus:latest
+    container_name: gso-directus
+    ports:
+      - "8055:8055"
+    volumes:
+      - directus_uploads:/directus/uploads
+      - directus_extensions:/directus/extensions
+    environment:
+      KEY: '255d861b-5ea1-5996-9aa3-922530ec40b1'
+      SECRET: '6116487b-cda1-52c2-b5b5-c8022c45e263'
+      
+      DB_CLIENT: 'pg'
+      DB_HOST: 'postgres'
+      DB_PORT: '5432'
+      DB_DATABASE: 'directus'
+      DB_USER: 'directus'
+      DB_PASSWORD: 'directus'
+      
+      ADMIN_EMAIL: 'admin@example.com'
+      ADMIN_PASSWORD: 'admin123'
+      
+      PUBLIC_URL: 'http://localhost:8055'
+      
+      # Security
+      CORS_ENABLED: 'true'
+      CORS_ORIGIN: 'http://localhost:8080'
+      
+      # Rate limiting
+      RATE_LIMITER_ENABLED: 'false'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8055/server/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # React App (Vite)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gso-app
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_DIRECTUS_URL=http://localhost:8055
+      - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
+      - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+    depends_on:
+      directus:
+        condition: service_healthy
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  directus_uploads:
+  directus_extensions:
