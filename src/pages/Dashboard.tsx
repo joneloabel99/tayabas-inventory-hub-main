@@ -5,7 +5,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from "recharts";
-import { useDirectusItems } from "@/hooks/useDirectusItems";
+import { useItems } from "@/hooks/useItems";
 
 // Mock chart data for now - can be replaced with real data from Directus
 const monthlyStockMovement = [
@@ -48,7 +48,7 @@ const custodianAssets = [
 ];
 
 export default function Dashboard() {
-  const { items, isLoading } = useDirectusItems();
+  const { items, isLoading } = useItems();
   
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalValue = items.reduce((sum, item) => sum + item.totalValue, 0);

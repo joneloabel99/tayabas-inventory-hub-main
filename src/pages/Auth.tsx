@@ -6,12 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { useDirectusAuth } from "@/hooks/useDirectusAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Package, Loader2 } from "lucide-react";
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, signIn, signUp } = useDirectusAuth();
+  const { user, signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");

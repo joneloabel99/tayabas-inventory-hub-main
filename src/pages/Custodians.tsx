@@ -1,9 +1,9 @@
 import { Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDirectusCustodians } from "@/hooks/useDirectusCustodians";
+import { useCustodians } from "@/hooks/useCustodians";
 
 export default function Custodians() {
-  const { custodians, isLoading } = useDirectusCustodians();
+  const { custodians, isLoading } = useCustodians();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">

@@ -1,27 +1,6 @@
-# Directus Migration Complete
+# Directus Backend Setup Guide
 
-Your GSO Inventory System has been successfully migrated from Supabase to Directus for local development with Docker.
-
-## What Was Changed
-
-### 1. **Authentication System**
-- Replaced Supabase auth with Directus auth
-- Created `useDirectusAuth` hook for authentication
-- Uses localStorage for session management (mock implementation for local dev)
-- Updated `Auth.tsx`, `ProtectedRoute.tsx`, and `AppLayout.tsx` to use Directus auth
-
-### 2. **Data Hooks**
-- All data operations now use Directus hooks:
-  - `useDirectusItems` - for items management
-  - `useDirectusMovements` - for stock movements
-  - `useDirectusCustodians` - for custodians management
-
-### 3. **Components Updated**
-- `Items.tsx` - now uses Directus for CRUD operations
-- `StockCardNew.tsx` - displays stock history from Directus
-- `AppLayout.tsx` - uses Directus auth for user display and sign out
-- `Auth.tsx` - login/signup with Directus
-- `ProtectedRoute.tsx` - route protection with Directus auth
+This guide explains how to set up and run this application with a Directus backend using Docker.
 
 ## How to Use with Docker
 
@@ -80,17 +59,8 @@ The current Directus authentication is a **mock implementation** for local devel
 
 ## Benefits
 
-- **No Supabase dependency** - runs completely locally with Docker
+- **Runs completely locally** with Docker
 - **Full control** - manage your backend with Directus CMS
 - **Easy setup** - Docker Compose handles all services
 - **Database access** - Direct PostgreSQL access on port 5432
 
-## Original Supabase Files
-
-The original Supabase files remain in the codebase but are no longer used:
-- `src/hooks/useAuth.ts`
-- `src/hooks/useItems.ts`
-- `src/hooks/useStockMovements.ts`
-- `src/integrations/supabase/*`
-
-You can safely ignore or delete these files.

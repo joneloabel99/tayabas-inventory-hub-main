@@ -2,8 +2,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { directus } from "@/lib/directus";
 import { toast } from "sonner";
 import { Custodian } from "@/types";
+import { useAuth } from "./useAuth";
 
-export function useDirectusCustodians() {
+export function useCustodians() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: custodians = [], isLoading } = useQuery({
@@ -18,6 +20,7 @@ export function useDirectusCustodians() {
         return [];
       }
     },
+    enabled: !!user,
   });
 
   const createMutation = useMutation({

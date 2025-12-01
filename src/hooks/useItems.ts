@@ -1,101 +1,66 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { directus } from "@/lib/directus";
 import { toast } from "sonner";
-
-export interface Item {
-  id: string;
-  item_code: string;
-  item_name: string;
-  description: string | null;
-  category: string | null;
-  unit: string;
-  unit_cost: number;
-  quantity: number;
-  reorder_level: number;
-  location: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { InventoryItem } from "@/types";
+import { useAuth } from "./useAuth";
 
 export function useItems() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: items = [], isLoading, error } = useQuery({
-    queryKey: ["items"],
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ['items'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("items")
-        .select("*")
-        .order("item_name");
-
-      if (error) throw error;
-      return data as Item[];
+      try {
+        const response = await directus.getItems<InventoryItem>('items');
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch items:', error);
+        toast.error('Failed to load items from Directus');
+        return [];
+      }
     },
+    enabled: !!user,
   });
 
   const createItem = useMutation({
-    mutationFn: async (item: Omit<Item, "id" | "created_at" | "updated_at">) => {
-      const { data, error } = await supabase
-        .from("items")
-        .insert(item)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: (newItem: Partial<InventoryItem>) => 
+      directus.createItem<InventoryItem>('items', newItem),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      toast.success("Item created successfully");
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Item added successfully');
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to create item: ${error.message}`);
+    onError: () => {
+      toast.error('Failed to add item');
     },
   });
 
   const updateItem = useMutation({
-    mutationFn: async ({
-      id,
-      ...item
-    }: Partial<Item> & { id: string }) => {
-      const { data, error } = await supabase
-        .from("items")
-        .update(item)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: ({ id, data }: { id: string; data: Partial<InventoryItem> }) =>
+      directus.updateItem<InventoryItem>('items', id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      toast.success("Item updated successfully");
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Item updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to update item: ${error.message}`);
+    onError: () => {
+      toast.error('Failed to update item');
     },
   });
 
   const deleteItem = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("items").delete().eq("id", id);
-
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => directus.deleteItem('items', id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      toast.success("Item deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      toast.success('Item deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to delete item: ${error.message}`);
+    onError: () => {
+      toast.error('Failed to delete item');
     },
   });
 
   return {
     items,
     isLoading,
-    error,
     createItem,
     updateItem,
     deleteItem,

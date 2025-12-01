@@ -16,7 +16,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useDirectusAuth } from "@/hooks/useDirectusAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -34,7 +34,7 @@ const navigation = [
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut } = useDirectusAuth();
+  const { user, signOut } = useAuth();
 
   // For now, show all navigation - role system can be added later to Directus
   const visibleNavigation = navigation;

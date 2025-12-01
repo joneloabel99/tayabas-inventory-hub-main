@@ -1,6 +1,6 @@
 // Directus API Client Configuration
-const DIRECTUS_URL = import.meta.env.VITE_DIRECTUS_URL || '';
-const DIRECTUS_TOKEN = import.meta.env.VITE_DIRECTUS_TOKEN || '';
+const DIRECTUS_URL = import.meta.env.VITE_HRMS_URL || '';
+const DIRECTUS_TOKEN = import.meta.env.VITE_SERVICE_TOKEN || '';
 
 export interface DirectusResponse<T> {
   data: T;
@@ -16,11 +16,13 @@ export interface DirectusListResponse<T> {
 
 class DirectusClient {
   private baseURL: string;
-  private token: string;
+  private token: string | null;
+  private refreshToken: string | null;
 
   constructor() {
     this.baseURL = DIRECTUS_URL;
-    this.token = DIRECTUS_TOKEN;
+    this.token = localStorage.getItem("directus_access_token");
+    this.refreshToken = localStorage.getItem("directus_refresh_token");
   }
 
   private async request<T>(
@@ -29,20 +31,67 @@ class DirectusClient {
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.token}`,
-        ...options.headers,
-      },
+      headers,
     });
 
+    if (response.status === 204) {
+      return Promise.resolve(null as T);
+    }
+
     if (!response.ok) {
-      throw new Error(`Directus API Error: ${response.statusText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.errors[0]?.message || `Directus API Error: ${response.statusText}`);
     }
 
     return response.json();
+  }
+
+  async login(email: string, password: string): Promise<any> {
+    const response = await this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    this.token = response.data.access_token;
+    this.refreshToken = response.data.refresh_token;
+    localStorage.setItem("directus_access_token", this.token!);
+    localStorage.setItem("directus_refresh_token", this.refreshToken!);
+    return response;
+  }
+
+  async logout(): Promise<void> {
+    if (this.refreshToken) {
+      await this.request('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: this.refreshToken }),
+      });
+      this.token = null;
+      this.refreshToken = null;
+      localStorage.removeItem("directus_access_token");
+      localStorage.removeItem("directus_refresh_token");
+    }
+  }
+
+  async getMe(): Promise<any> {
+    return this.request('/users/me');
+  }
+
+  async register(email: string, password: string, first_name: string, last_name?: string): Promise<any> {
+    const response = await this.request('/users', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, first_name, last_name }),
+    });
+    return response;
   }
 
   // Items endpoints

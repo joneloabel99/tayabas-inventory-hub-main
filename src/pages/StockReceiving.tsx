@@ -8,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { StockMovement } from "@/types";
-import { useDirectusItems } from "@/hooks/useDirectusItems";
-import { useDirectusMovements } from "@/hooks/useDirectusMovements";
+import { useItems } from "@/hooks/useItems";
+import { useStockMovements } from "@/hooks/useStockMovements";
 
 export default function StockReceiving() {
-  const { items } = useDirectusItems();
-  const { movements, createMovement } = useDirectusMovements('received');
+  const { items } = useItems();
+  const { movements, createMovement } = useStockMovements('received');
 
   const [formData, setFormData] = useState({
     itemId: "",

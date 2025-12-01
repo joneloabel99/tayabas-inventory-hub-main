@@ -1,82 +1,48 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { directus } from "@/lib/directus";
 import { toast } from "sonner";
+import { StockMovement } from "@/types";
+import { useAuth } from "./useAuth";
 
-export interface StockMovement {
-  id: string;
-  item_id: string;
-  movement_type: "received" | "issued";
-  quantity: number;
-  reference: string;
-  custodian: string | null;
-  department: string | null;
-  purpose: string | null;
-  movement_date: string;
-  created_by: string | null;
-  created_at: string;
-}
-
-export function useStockMovements(itemId?: string) {
+export function useStockMovements(type?: 'received' | 'issued') {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: movements = [], isLoading, error } = useQuery({
-    queryKey: itemId ? ["stock_movements", itemId] : ["stock_movements"],
+  const { data: movements = [], isLoading } = useQuery({
+    queryKey: ['movements', type],
     queryFn: async () => {
-      let query = supabase
-        .from("stock_movements")
-        .select("*")
-        .order("movement_date", { ascending: false });
-
-      if (itemId) {
-        query = query.eq("item_id", itemId);
+      try {
+        const params = type ? { filter: JSON.stringify({ type: { _eq: type } }) } : {};
+        const response = await directus.getItems<StockMovement>('stock_movements', params);
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch movements:', error);
+        toast.error('Failed to load stock movements');
+        return [];
       }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as StockMovement[];
     },
+    enabled: !!user,
   });
 
   const createMovement = useMutation({
-    mutationFn: async (
-      movement: Omit<StockMovement, "id" | "created_at" | "created_by">
-    ) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { data, error } = await supabase
-        .from("stock_movements")
-        .insert({
-          ...movement,
-          created_by: user?.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: (newMovement: Partial<StockMovement>) =>
+      directus.createItem<StockMovement>('stock_movements', newMovement),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stock_movements"] });
+      queryClient.invalidateQueries({ queryKey: ['movements'] });
       queryClient.invalidateQueries({ queryKey: ["items"] });
-      toast.success("Movement recorded successfully");
+      toast.success('Movement recorded successfully');
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to record movement: ${error.message}`);
+    onError: () => {
+      toast.error('Failed to record movement');
     },
   });
 
   const deleteMovement = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("stock_movements")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      await directus.deleteItem('stock_movements', id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stock_movements"] });
+      queryClient.invalidateQueries({ queryKey: ["movements"] });
       queryClient.invalidateQueries({ queryKey: ["items"] });
       toast.success("Movement deleted successfully");
     },
@@ -88,8 +54,8 @@ export function useStockMovements(itemId?: string) {
   return {
     movements,
     isLoading,
-    error,
     createMovement,
     deleteMovement,
   };
 }
+

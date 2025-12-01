@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useDirectusItems } from "@/hooks/useDirectusItems";
+import { useItems } from "@/hooks/useItems";
 import { DepartmentRequest } from "@/types";
 
 export default function DepartmentRequests() {
-  const { items } = useDirectusItems();
+  const { items } = useItems();
   const [requests, setRequests] = useState<DepartmentRequest[]>([
     {
       id: "1",

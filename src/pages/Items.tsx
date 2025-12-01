@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { InventoryItem } from "@/types";
-import { useDirectusItems } from "@/hooks/useDirectusItems";
+import { useItems } from "@/hooks/useItems";
 
 export default function Items() {
-  const { items, isLoading, createItem, updateItem, deleteItem } = useDirectusItems();
+  const { items, isLoading, createItem, updateItem, deleteItem } = useItems();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

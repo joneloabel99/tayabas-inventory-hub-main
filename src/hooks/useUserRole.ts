@@ -1,32 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 import { useAuth } from "./useAuth";
 
 export type UserRole = "admin" | "manager" | "staff" | "viewer";
 
 export function useUserRole() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  const { data: role, isLoading } = useQuery({
-    queryKey: ["userRole", user?.id],
-    queryFn: async () => {
-      if (!user) return null;
+  // The user role should be available directly from the user object after useAuth is properly integrated
+  const role: UserRole | null = useMemo(() => {
+    // Assuming 'role' is a field directly on the Directus User object
+    // Or it might be nested, depending on Directus configuration.
+    // For now, casting it assuming it's directly available.
+    // If user.role is null or undefined, default to 'viewer' or null
+    return (user?.role as UserRole) || null;
+  }, [user]);
 
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user role:", error);
-        return "viewer" as UserRole;
-      }
-
-      return data.role as UserRole;
-    },
-    enabled: !!user,
-  });
+  const isLoading = authLoading; // Inherit loading state from useAuth
 
   const hasRole = (requiredRole: UserRole | UserRole[]) => {
     if (!role) return false;

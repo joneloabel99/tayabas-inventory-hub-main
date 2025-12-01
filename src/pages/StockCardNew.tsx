@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useDirectusItems } from "@/hooks/useDirectusItems";
-import { useDirectusMovements } from "@/hooks/useDirectusMovements";
+import { useItems } from "@/hooks/useItems";
+import { useStockMovements } from "@/hooks/useStockMovements";
 import { format } from "date-fns";
 
 interface StockCardEntry {
@@ -24,8 +24,8 @@ export default function StockCardNew() {
   const [selectedItem, setSelectedItem] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { items, isLoading: itemsLoading } = useDirectusItems();
-  const { movements, isLoading: movementsLoading } = useDirectusMovements();
+  const { items, isLoading: itemsLoading } = useItems();
+  const { movements, isLoading: movementsLoading } = useStockMovements();
 
   // Filter items based on search
   const filteredItems = useMemo(() => {
