@@ -54,8 +54,7 @@ export default function DepartmentRequests() {
       requestedBy: formData.requestedBy,
       requestDate: new Date().toISOString().split('T')[0],
       items: [{
-        itemId: formData.itemId,
-        itemName: selectedItem.itemName,
+        item_id: formData.itemId, // Send the ID of the related item using item_id
         quantity: requestedQuantity,
         purpose: formData.purpose,
       }],
@@ -153,15 +152,19 @@ export default function DepartmentRequests() {
               </thead>
               <tbody>
                 {requests.map((request) => {
-                  console.log('Request Item:', request.items[0]);
+                  const requestItem = request.items[0];
+                  // Ensure items are loaded before trying to find an item
+                  const itemDetails = items.find(item => item.id === String(requestItem?.item_id));
+                  const displayedItemName = itemDetails?.itemName || "N/A";
+
                   return (
                   <tr key={request.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                     <td className="py-3 px-4 text-sm">{request.requestDate}</td>
                     <td className="py-3 px-4 text-sm font-medium">{request.department}</td>
                     <td className="py-3 px-4 text-sm">{request.requestedBy}</td>
-                    <td className="py-3 px-4 text-sm">{request.items[0]?.itemName || "N/A"}</td>
-                    <td className="py-3 px-4 text-sm text-right">{request.items[0]?.quantity || 0}</td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground max-w-xs truncate">{request.items[0]?.purpose || ""}</td>
+                    <td className="py-3 px-4 text-sm">{displayedItemName}</td>
+                    <td className="py-3 px-4 text-sm text-right">{requestItem?.quantity || 0}</td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground max-w-xs truncate">{requestItem?.purpose || ""}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
                         {getStatusIcon(request.status)}

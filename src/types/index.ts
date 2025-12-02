@@ -51,7 +51,8 @@ export interface DepartmentRequest {
 }
 
 export interface RequestItem {
-  itemId: string;
+  id: string; // ID of the junction table entry
+  item_id: string;
   itemName: string;
   quantity: number;
   purpose: string;

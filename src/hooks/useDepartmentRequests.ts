@@ -13,7 +13,6 @@ export function useDepartmentRequests() {
     queryFn: async () => {
       try {
         const response = await directusService.getItems<DepartmentRequest>('department_requests', { fields: '*,items.*' });
-        console.log('Department Requests API Response:', response.data);
         return response.data.map(request => ({ ...request, id: String(request.id) }));
       } catch (error) {
         console.error('Failed to fetch department requests:', error);
