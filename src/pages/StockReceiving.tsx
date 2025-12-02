@@ -42,7 +42,7 @@ export default function StockReceiving() {
       reference: formData.reference,
     };
 
-    createMovement(newMovement);
+    createMovement.mutate(newMovement);
     
     // Reset form
     setFormData({

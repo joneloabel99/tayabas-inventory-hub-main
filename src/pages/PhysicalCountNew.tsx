@@ -8,42 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-
-interface PhysicalCount {
-  id: string;
-  countDate: string;
-  countedBy: string;
-  location: string;
-  status: "Scheduled" | "In Progress" | "Completed";
-  itemsCounted: number;
-  discrepanciesFound: number;
-  notes: string;
-}
+import { PhysicalCount } from "@/types";
+import { usePhysicalCounts } from "@/hooks/usePhysicalCounts";
 
 export default function PhysicalCountNew() {
-  const [counts, setCounts] = useState<PhysicalCount[]>([
-    {
-      id: "1",
-      countDate: "2024-01-20",
-      countedBy: "Juan Dela Cruz",
-      location: "Warehouse A",
-      status: "Completed",
-      itemsCounted: 150,
-      discrepanciesFound: 3,
-      notes: "Annual inventory count",
-    },
-    {
-      id: "2",
-      countDate: "2024-01-15",
-      countedBy: "Maria Santos",
-      location: "IT Storage",
-      status: "Completed",
-      itemsCounted: 45,
-      discrepanciesFound: 0,
-      notes: "Quarterly IT equipment audit",
-    },
-  ]);
-
+  const { counts, isLoading, createCount } = usePhysicalCounts();
   const [searchQuery, setSearchQuery] = useState("");
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -59,8 +28,7 @@ export default function PhysicalCountNew() {
   );
 
   const handleSchedule = () => {
-    const newCount: PhysicalCount = {
-      id: Date.now().toString(),
+    createCount({
       countDate: formData.countDate,
       countedBy: formData.countedBy,
       location: formData.location,
@@ -68,12 +36,9 @@ export default function PhysicalCountNew() {
       itemsCounted: 0,
       discrepanciesFound: 0,
       notes: formData.notes,
-    };
-
-    setCounts([newCount, ...counts]);
+    });
     setIsScheduleDialogOpen(false);
     resetForm();
-    toast.success("Physical count scheduled successfully");
   };
 
   const resetForm = () => {

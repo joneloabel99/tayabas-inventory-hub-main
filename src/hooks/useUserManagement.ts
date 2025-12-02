@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { directus } from "@/lib/directus"; // Import directus client
+import { directus, directusService } from "@/lib/directus"; // Import directus client
 import { useAuth } from "./useAuth";
+import { ROLE_UUID_MAP, getRoleNameFromId } from "@/config/rolePermissions";
 
 export interface UserProfile {
   id: string;
@@ -21,11 +22,15 @@ export function useUserManagement() {
     queryKey: ["users"],
     queryFn: async () => {
       try {
-        const response = await directus.getItems<UserProfile>('users', {
+        const response = await directusService.getAllUsers<any>({
           // You might need to specify fields to fetch related data like role and department
-          fields: 'id,first_name,last_name,email,department,role', 
+          fields: 'id,first_name,last_name,email,role', 
         });
-        return response.data;
+        return response.data.map(userItem => ({
+          ...userItem,
+          role: getRoleNameFromId(userItem.role) || "viewer", // Convert role ID to name
+          department: userItem.department || null, // Ensure department is explicitly set or null
+        }));
       } catch (error) {
         console.error("Failed to fetch users:", error);
         toast.error("Failed to load users from Directus");
@@ -39,7 +44,7 @@ export function useUserManagement() {
   const updateProfile = useMutation({
     mutationFn: async (data: { userId: string; first_name: string; last_name?: string; department: string }) => {
       const { userId, ...updateData } = data;
-      await directus.updateItem<UserProfile>('users', userId, updateData);
+      await directusService.updateUser<UserProfile>(userId, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -53,9 +58,13 @@ export function useUserManagement() {
 
   // Update user role
   const updateRole = useMutation({
-    mutationFn: async (data: { userId: string; role: "admin" | "manager" | "staff" | "viewer" }) => {
-      const { userId, role } = data;
-      await directus.updateItem<UserProfile>('users', userId, { role });
+    mutationFn: async (data: { userId: string; roleName: "admin" | "manager" | "staff" | "viewer" }) => {
+      const { userId, roleName } = data;
+      const roleId = ROLE_UUID_MAP[roleName]; // Convert role name to ID
+      if (!roleId) {
+        throw new Error(`Unknown role name: ${roleName}`);
+      }
+      await directusService.updateUser<UserProfile>(userId, { role: roleId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });

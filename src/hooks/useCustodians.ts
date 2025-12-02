@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { directus } from "@/lib/directus";
+import { directus, directusService } from "@/lib/directus";
 import { toast } from "sonner";
 import { Custodian } from "@/types";
 import { useAuth } from "./useAuth";
@@ -12,8 +12,8 @@ export function useCustodians() {
     queryKey: ['custodians'],
     queryFn: async () => {
       try {
-        const response = await directus.getItems<Custodian>('custodians');
-        return response.data;
+        const response = await directusService.getItems<Custodian>('custodians');
+        return response.data.map(custodian => ({ ...custodian, id: String(custodian.id) }));
       } catch (error) {
         console.error('Failed to fetch custodians:', error);
         toast.error('Failed to load custodians');

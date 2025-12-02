@@ -18,6 +18,7 @@ import StockCardNew from "@/pages/StockCardNew";
 import StockIssuance from "@/pages/StockIssuance";
 import StockReceiving from "@/pages/StockReceiving";
 import UserRoles from "@/pages/UserRoles";
+import CustodianDetail from "@/pages/CustodianDetail";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/receiving" element={<RoleGuard allowedRoles={["admin", "manager", "staff"]}><StockReceiving /></RoleGuard>} />
             <Route path="/issuance" element={<RoleGuard allowedRoles={["admin", "manager", "staff"]}><StockIssuance /></RoleGuard>} />
             <Route path="/custodians" element={<Custodians />} />
+            <Route path="/custodians/:id" element={<CustodianDetail />} />
             <Route path="/stock-card" element={<StockCardNew />} />
             <Route path="/physical-count" element={<RoleGuard allowedRoles={["admin", "manager", "staff"]}><PhysicalCountNew /></RoleGuard>} />
             <Route path="/requests" element={<RoleGuard allowedRoles={["admin", "manager"]}><DepartmentRequests /></RoleGuard>} />

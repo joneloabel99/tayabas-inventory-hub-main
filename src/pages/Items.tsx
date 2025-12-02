@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,13 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { InventoryItem } from "@/types";
 import { useItems } from "@/hooks/useItems";
+import { useStockMovements } from "@/hooks/useStockMovements";
 
 export default function Items() {
   const { items, isLoading, createItem, updateItem, deleteItem } = useItems();
+  const { createMovement } = useStockMovements();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isReorderDialogOpen, setIsReorderDialogOpen] = useState(false);
+  const [reorderQuantity, setReorderQuantity] = useState(0);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
   const [formData, setFormData] = useState({
@@ -118,6 +122,41 @@ export default function Items() {
     setIsDeleteDialogOpen(true);
   };
 
+  const openReorderDialog = (item: InventoryItem) => {
+    setSelectedItem(item);
+    setIsReorderDialogOpen(true);
+  };
+
+  const handleReorder = () => {
+    if (!selectedItem) return;
+
+    const newQuantity = selectedItem.quantity + reorderQuantity;
+    const newTotalValue = newQuantity * selectedItem.unitCost;
+    const newStatus = newQuantity > selectedItem.reorderLevel ? "In Stock" : "Low Stock";
+
+    updateItem.mutate({
+      id: selectedItem.id,
+      data: {
+        quantity: newQuantity,
+        totalValue: newTotalValue,
+        status: newStatus,
+        lastUpdated: new Date().toISOString().split('T')[0],
+      },
+    });
+
+    createMovement.mutate({
+      item: selectedItem.id,
+      type: 'received',
+      quantity: reorderQuantity,
+      date: new Date().toISOString().split('T')[0],
+      reference: 'Re-order',
+    });
+
+    setIsReorderDialogOpen(false);
+    setSelectedItem(null);
+    setReorderQuantity(0);
+  };
+
   const resetForm = () => {
     setFormData({
       itemCode: "",
@@ -207,6 +246,14 @@ export default function Items() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openReorderDialog(item)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ShoppingBasket className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -449,6 +496,30 @@ export default function Items() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isReorderDialogOpen} onOpenChange={setIsReorderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Re-order Item: {selectedItem?.itemName}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reorder-quantity">Quantity to Add</Label>
+              <Input
+                id="reorder-quantity"
+                type="number"
+                value={reorderQuantity}
+                onChange={(e) => setReorderQuantity(parseInt(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReorderDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleReorder}>Confirm Re-order</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

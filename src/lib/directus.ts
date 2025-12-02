@@ -150,6 +150,18 @@ class DirectusServiceClient extends BaseDirectusClient {
   async getItem<T>(collection: string, id: string): Promise<DirectusResponse<T>> {
     return this.request<DirectusResponse<T>>(`/items/${collection}/${id}`);
   }
+  async getAllUsers<T>(params?: Record<string, any>): Promise<DirectusListResponse<T>> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return this.request<DirectusListResponse<T>>(`/users${queryString}`);
+  }
+
+  // New method to update a user in directus_users
+  async updateUser<T>(id: string, data: Partial<T>): Promise<DirectusResponse<T>> {
+    return this.request<DirectusResponse<T>>(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const directus = new DirectusUserClient();

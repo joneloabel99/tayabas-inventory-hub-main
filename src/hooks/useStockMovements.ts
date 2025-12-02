@@ -4,17 +4,32 @@ import { toast } from "sonner";
 import { StockMovement } from "@/types";
 import { useAuth } from "./useAuth";
 
-export function useStockMovements(type?: 'received' | 'issued') {
+export function useStockMovements(type?: 'received' | 'issued', custodianId?: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: movements = [], isLoading } = useQuery({
-    queryKey: ['movements', type],
+    queryKey: ['movements', type, custodianId],
     queryFn: async () => {
       try {
-        const params = type ? { filter: JSON.stringify({ type: { _eq: type } }) } : {};
+        let filter: any = {};
+        if (type) {
+          filter.type = { _eq: type };
+        }
+        if (custodianId) {
+          filter.custodian = { _eq: custodianId };
+        }
+
+        const params = {
+          filter: JSON.stringify(filter),
+          fields: '*,custodian.*,item.*',
+        };
         const response = await directusService.getItems<StockMovement>('stock_movements', params);
-        return response.data;
+        return response.data.map(movement => ({
+          ...movement,
+          item: movement.item ? { ...movement.item, id: String(movement.item.id) } : movement.item,
+          custodian: movement.custodian ? { ...movement.custodian, id: String(movement.custodian.id) } : movement.custodian,
+        }));
       } catch (error) {
         console.error('Failed to fetch movements:', error);
         toast.error('Failed to load stock movements');

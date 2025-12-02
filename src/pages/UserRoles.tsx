@@ -30,7 +30,7 @@ export default function UserRoles() {
 
       await updateRole.mutateAsync({
         userId: selectedUserId,
-        role: formData.role as "admin" | "manager" | "staff" | "viewer",
+        roleName: formData.role as "admin" | "manager" | "staff" | "viewer",
       });
 
       setIsEditDialogOpen(false);
@@ -43,7 +43,7 @@ export default function UserRoles() {
   const openEditDialog = (user: any) => {
     setSelectedUserId(user.id);
     setFormData({
-      fullName: user.full_name || "",
+      fullName: ((user.first_name || '') + ' ' + (user.last_name || '')).trim(),
       department: user.department || "",
       role: user.role,
     });
@@ -138,7 +138,9 @@ export default function UserRoles() {
               <tbody>
                 {users?.map((user) => (
                   <tr key={user.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                    <td className="py-3 px-4 text-sm font-medium">{user.full_name || "N/A"}</td>
+                    <td className="py-3 px-4 text-sm font-medium">
+                      {((user.first_name || '') + ' ' + (user.last_name || '')).trim() || "N/A"}
+                    </td>
                     <td className="py-3 px-4 text-sm">{user.email}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>

@@ -13,7 +13,7 @@ import { useStockMovements } from "@/hooks/useStockMovements";
 import { useCustodians } from "@/hooks/useCustodians";
 
 export default function StockIssuance() {
-  const { items } = useItems();
+  const { items, updateItem } = useItems();
   const { movements, createMovement } = useStockMovements('issued');
   const { custodians } = useCustodians();
 
@@ -38,30 +38,54 @@ export default function StockIssuance() {
       return;
     }
 
+    if (selectedItem.quantity < parseInt(formData.quantity)) {
+      toast.error("Not enough stock available.");
+      return;
+    }
+
     const newMovement = {
-      itemId: formData.itemId,
+      item: formData.itemId,
       itemName: selectedItem.itemName,
       type: "issued" as const,
       quantity: parseInt(formData.quantity),
       date: formData.date,
       reference: formData.reference,
-      custodian: selectedCustodian.name,
+      custodian: selectedCustodian.id,
     };
 
-    createMovement(newMovement);
-    
-    // Reset form
-    setFormData({
-      itemId: "",
-      quantity: "",
-      custodianId: "",
-      reference: "",
-      date: new Date().toISOString().split('T')[0],
-      purpose: "",
-      notes: "",
-    });
+    createMovement.mutate(newMovement, {
+      onSuccess: () => {
+        const updatedQuantity = selectedItem.quantity - parseInt(formData.quantity);
+        const updatedStatus =
+          updatedQuantity === 0
+            ? "Out of Stock"
+            : updatedQuantity <= selectedItem.reorderLevel
+            ? "Low Stock"
+            : "In Stock";
 
-    toast.success("Stock issued successfully");
+        updateItem.mutate({
+          id: selectedItem.id,
+          data: {
+            quantity: updatedQuantity,
+            totalValue: updatedQuantity * selectedItem.unitCost,
+            status: updatedStatus,
+          },
+        });
+
+        // Reset form
+        setFormData({
+          itemId: "",
+          quantity: "",
+          custodianId: "",
+          reference: "",
+          date: new Date().toISOString().split("T")[0],
+          purpose: "",
+          notes: "",
+        });
+
+        toast.success("Stock issued successfully");
+      },
+    });
   };
 
   return (
@@ -193,34 +217,38 @@ export default function StockIssuance() {
                   No issuances recorded yet
                 </div>
               ) : (
-                movements.slice(0, 10).map((movement) => (
-                  <div
-                    key={movement.id}
-                    className="flex items-start gap-3 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <PackageMinus className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{movement.itemName}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            To: {movement.custodian}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Ref: {movement.reference}
-                          </p>
-                        </div>
-                        <span className="text-sm font-semibold text-primary flex-shrink-0">
-                          -{movement.quantity}
-                        </span>
+                movements.slice(0, 10).map((movement) => {
+                  const foundCustodian = custodians.find(c => c.id === String(movement.custodian?.id));
+                  return (
+                    <div
+                      key={movement.id}
+                      className="flex items-start gap-3 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <PackageMinus className="w-5 h-5 text-primary" />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">{movement.date}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{movement.itemName}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              To: {foundCustodian?.name || 'N/A'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Ref: {movement.reference}
+                            </p>
+                          </div>
+                          <span className="text-sm font-semibold text-primary flex-shrink-0">
+                            -{movement.quantity}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">{movement.date}</p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
+
             </div>
           </CardContent>
         </Card>

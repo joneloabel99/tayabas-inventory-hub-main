@@ -15,13 +15,13 @@ export interface InventoryItem {
 
 export interface StockMovement {
   id: string;
-  itemId: string;
+  item: InventoryItem;
   itemName: string;
   type: "received" | "issued";
   quantity: number;
   date: string;
   reference: string;
-  custodian?: string;
+  custodian?: Custodian;
 }
 
 export interface Custodian {
@@ -55,4 +55,15 @@ export interface RequestItem {
   itemName: string;
   quantity: number;
   purpose: string;
+}
+
+export interface PhysicalCount {
+  id: string;
+  countDate: string;
+  countedBy: string;
+  location: string;
+  status: "Scheduled" | "In Progress" | "Completed";
+  itemsCounted: number;
+  discrepanciesFound: number;
+  notes: string;
 }

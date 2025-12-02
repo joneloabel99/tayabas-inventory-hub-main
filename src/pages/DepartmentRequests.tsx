@@ -10,37 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useItems } from "@/hooks/useItems";
 import { DepartmentRequest } from "@/types";
+import { useDepartmentRequests } from "@/hooks/useDepartmentRequests";
 
 export default function DepartmentRequests() {
   const { items } = useItems();
-  const [requests, setRequests] = useState<DepartmentRequest[]>([
-    {
-      id: "1",
-      requestDate: "2024-01-18",
-      department: "Human Resources",
-      requestedBy: "Juan Dela Cruz",
-      items: [{
-        itemId: "1",
-        itemName: "A4 Bond Paper (500 sheets)",
-        quantity: 20,
-        purpose: "Monthly reports printing",
-      }],
-      status: "approved",
-    },
-    {
-      id: "2",
-      requestDate: "2024-01-19",
-      department: "Finance",
-      requestedBy: "Maria Santos",
-      items: [{
-        itemId: "2",
-        itemName: "Ballpoint Pen (Blue)",
-        quantity: 5,
-        purpose: "Office supplies replenishment",
-      }],
-      status: "pending",
-    },
-  ]);
+  const { requests, isLoading, createRequest, updateRequest } = useDepartmentRequests();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -53,43 +27,53 @@ export default function DepartmentRequests() {
 
   const handleSubmit = () => {
     const selectedItem = items.find(item => item.id === formData.itemId);
-    if (!selectedItem) return;
+    if (!selectedItem) {
+      toast.error("Please select an item.");
+      return;
+    }
 
-    const newRequest: DepartmentRequest = {
-      id: Date.now().toString(),
+    const requestedQuantity = parseInt(formData.quantity);
+
+    if (requestedQuantity <= 0) {
+      toast.error("Requested quantity must be greater than 0.");
+      return;
+    }
+
+    if (selectedItem.quantity <= 0) {
+      toast.error("Item is out of stock.");
+      return;
+    }
+
+    if (requestedQuantity > selectedItem.quantity) {
+      toast.error(`Requested quantity (${requestedQuantity}) exceeds available stock (${selectedItem.quantity}).`);
+      return;
+    }
+
+    const newRequest = {
       department: formData.department,
       requestedBy: formData.requestedBy,
       requestDate: new Date().toISOString().split('T')[0],
       items: [{
         itemId: formData.itemId,
         itemName: selectedItem.itemName,
-        quantity: parseInt(formData.quantity),
+        quantity: requestedQuantity,
         purpose: formData.purpose,
       }],
-      status: "pending",
+      status: "pending" as const,
     };
 
-    setRequests([newRequest, ...requests]);
+    createRequest.mutate(newRequest);
     setIsAddDialogOpen(false);
     resetForm();
-    toast.success("Request submitted successfully");
   };
 
   const handleApprove = (id: string) => {
-    setRequests(requests.map(req => 
-      req.id === id 
-        ? { ...req, status: "approved" as const }
-        : req
-    ));
+    updateRequest.mutate({ id, data: { status: "approved" } });
     toast.success("Request approved");
   };
 
   const handleReject = (id: string) => {
-    setRequests(requests.map(req => 
-      req.id === id 
-        ? { ...req, status: "rejected" as const }
-        : req
-    ));
+    updateRequest.mutate({ id, data: { status: "rejected" } });
     toast.error("Request rejected");
   };
 
@@ -150,6 +134,9 @@ export default function DepartmentRequests() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <p className="text-center text-muted-foreground">Loading requests...</p>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -165,7 +152,9 @@ export default function DepartmentRequests() {
                 </tr>
               </thead>
               <tbody>
-                {requests.map((request) => (
+                {requests.map((request) => {
+                  console.log('Request Item:', request.items[0]);
+                  return (
                   <tr key={request.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                     <td className="py-3 px-4 text-sm">{request.requestDate}</td>
                     <td className="py-3 px-4 text-sm font-medium">{request.department}</td>
@@ -202,10 +191,12 @@ export default function DepartmentRequests() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  ); // Added this
+                })}
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
 

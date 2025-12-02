@@ -46,7 +46,7 @@ export default function StockCardNew() {
     if (!selectedItem || !selectedItemData || !movements) return [];
 
     const sortedMovements = [...movements]
-      .filter(m => m.itemId === selectedItem)
+      .filter(m => m.item && m.item.id === selectedItem)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     let runningBalance = 0;
@@ -69,7 +69,7 @@ export default function StockCardNew() {
         unitCost: selectedItemData.unitCost,
         totalValue: runningBalance * selectedItemData.unitCost,
         remarks: movement.custodian 
-          ? `Custodian: ${movement.custodian}`
+          ? `Custodian: ${movement.custodian.name}`
           : '',
       });
     });

@@ -1,15 +1,94 @@
-import { Users } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Users, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useCustodians } from "@/hooks/useCustodians";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { useItems } from "@/hooks/useItems";
+import { useStockMovements } from "@/hooks/useStockMovements";
 
 export default function Custodians() {
-  const { custodians, isLoading } = useCustodians();
+  const navigate = useNavigate();
+  const { custodians, isLoading: isLoadingCustodians, createCustodian } = useCustodians();
+  const { items, isLoading: isLoadingItems } = useItems();
+  const { movements, isLoading: isLoadingMovements } = useStockMovements();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    department: "",
+    email: "",
+    phone: "",
+  });
+
+  const handleAddCustodian = () => {
+    if (!formData.name || !formData.department || !formData.email || !formData.phone) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    createCustodian({
+      name: formData.name,
+      department: formData.department,
+      email: formData.email,
+      phone: formData.phone,
+      itemsAssigned: 0,
+      totalValue: 0,
+    });
+    setIsAddDialogOpen(false);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      department: "",
+      email: "",
+      phone: "",
+    });
+  };
+
+  const custodiansWithCalculatedValues = useMemo(() => {
+    if (isLoadingCustodians || isLoadingItems || isLoadingMovements || !custodians || !items || !movements) return [];
+
+    return custodians.map(custodian => {
+      let itemsAssigned = 0;
+      let totalValue = 0;
+
+      const custodianMovements = movements.filter(m => m.custodian?.id === custodian.id);
+
+      custodianMovements.forEach(movement => {
+        if (movement.type === 'issued') {
+          itemsAssigned += movement.quantity;
+          const item = items.find(i => i.id === movement.item.id);
+          if (item) {
+            totalValue += movement.quantity * item.unitCost;
+          }
+        }
+      });
+
+      return {
+        ...custodian,
+        itemsAssigned,
+        totalValue,
+      };
+    });
+  }, [custodians, items, movements, isLoadingCustodians, isLoadingItems, isLoadingMovements]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Custodians</h1>
-        <p className="text-muted-foreground mt-1">Manage custodians and assigned assets</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Custodians</h1>
+          <p className="text-muted-foreground mt-1">Manage custodians and assigned assets</p>
+        </div>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Add New Custodian
+        </Button>
       </div>
 
       <Card>
@@ -20,12 +99,16 @@ export default function Custodians() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isLoadingCustodians || isLoadingItems || isLoadingMovements ? (
             <p className="text-center text-muted-foreground">Loading custodians...</p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {custodians.map((custodian) => (
-              <Card key={custodian.id} className="hover:shadow-lg transition-shadow">
+              {custodiansWithCalculatedValues.map((custodian) => (
+              <Card 
+                key={custodian.id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate(`/custodians/${custodian.id}`)}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -56,6 +139,62 @@ export default function Custodians() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Custodian Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Custodian</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Custodian's Full Name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">Department</Label>
+              <Input
+                id="department"
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                placeholder="Department Name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+63-xxx-xxxxxxx"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsAddDialogOpen(false); resetForm(); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddCustodian}>
+              Add Custodian
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
