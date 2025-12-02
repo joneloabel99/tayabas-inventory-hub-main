@@ -9,6 +9,10 @@ export interface DirectusUser {
   email: string;
   first_name: string;
   last_name?: string;
+  role: {
+    id: string;
+    name: string;
+  } | null;
   // Add other relevant user fields from Directus
 }
 
@@ -44,6 +48,7 @@ export function useAuth() {
         email: email, // Directus usually returns email in user data
         first_name: response.data.first_name || "User", // Assuming first_name is available
         last_name: response.data.last_name,
+        role: response.data.role || null,
       };
       setUser(fetchedUser);
       toast.success("Logged in successfully");

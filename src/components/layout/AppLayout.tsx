@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Package, 
@@ -35,6 +35,12 @@ const navigation = [
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   // For now, show all navigation - role system can be added later to Directus
   const visibleNavigation = navigation;
@@ -112,7 +118,7 @@ export function AppLayout() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={signOut}
+              onClick={handleSignOut}
               className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground"
             >
               <LogOut className="w-4 h-4" />

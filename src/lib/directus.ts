@@ -14,20 +14,18 @@ export interface DirectusListResponse<T> {
   };
 }
 
-class DirectusClient {
-  private baseURL: string;
-  private token: string | null;
-  private refreshToken: string | null;
+// A base client for making requests
+class BaseDirectusClient {
+  protected baseURL: string;
 
   constructor() {
     this.baseURL = DIRECTUS_URL;
-    this.token = localStorage.getItem("directus_access_token");
-    this.refreshToken = localStorage.getItem("directus_refresh_token");
   }
 
-  private async request<T>(
+  protected async _request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    token?: string | null
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
@@ -36,8 +34,8 @@ class DirectusClient {
       ...options.headers,
     };
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const response = await fetch(url, {
@@ -56,6 +54,24 @@ class DirectusClient {
 
     return response.json();
   }
+}
+
+// Client for user-specific actions
+class DirectusUserClient extends BaseDirectusClient {
+  private token: string | null;
+  private refreshToken: string | null;
+
+  constructor() {
+    super();
+    this.token = localStorage.getItem("directus_access_token");
+    this.refreshToken = localStorage.getItem("directus_refresh_token");
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    // For login, never send an auth token
+    const tokenToSend = endpoint === '/auth/login' ? null : this.token;
+    return this._request(endpoint, options, tokenToSend);
+  }
 
   async login(email: string, password: string): Promise<any> {
     const response = await this.request('/auth/login', {
@@ -70,20 +86,14 @@ class DirectusClient {
   }
 
   async logout(): Promise<void> {
-    if (this.refreshToken) {
-      await this.request('/auth/logout', {
-        method: 'POST',
-        body: JSON.stringify({ refresh_token: this.refreshToken }),
-      });
-      this.token = null;
-      this.refreshToken = null;
-      localStorage.removeItem("directus_access_token");
-      localStorage.removeItem("directus_refresh_token");
-    }
+    this.token = null;
+    this.refreshToken = null;
+    localStorage.removeItem("directus_access_token");
+    localStorage.removeItem("directus_refresh_token");
   }
 
   async getMe(): Promise<any> {
-    return this.request('/users/me');
+    return this.request('/users/me?fields=*,role.id,role.name');
   }
 
   async register(email: string, password: string, first_name: string, last_name?: string): Promise<any> {
@@ -92,16 +102,6 @@ class DirectusClient {
       body: JSON.stringify({ email, password, first_name, last_name }),
     });
     return response;
-  }
-
-  // Items endpoints
-  async getItems<T>(collection: string, params?: Record<string, any>): Promise<DirectusListResponse<T>> {
-    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
-    return this.request<DirectusListResponse<T>>(`/items/${collection}${queryString}`);
-  }
-
-  async getItem<T>(collection: string, id: string): Promise<DirectusResponse<T>> {
-    return this.request<DirectusResponse<T>>(`/items/${collection}/${id}`);
   }
 
   async createItem<T>(collection: string, data: Partial<T>): Promise<DirectusResponse<T>> {
@@ -124,13 +124,33 @@ class DirectusClient {
     });
   }
 
-  // Aggregation for analytics
   async aggregate(collection: string, aggregation: Record<string, any>): Promise<any> {
     const params = new URLSearchParams({
       aggregate: JSON.stringify(aggregation),
     });
     return this.request(`/items/${collection}?${params}`);
   }
+
+  async getItem<T>(collection: string, id: string): Promise<DirectusResponse<T>> {
+    return this.request<DirectusResponse<T>>(`/items/${collection}/${id}`);
+  }
 }
 
-export const directus = new DirectusClient();
+// Client for service-level (admin) actions
+class DirectusServiceClient extends BaseDirectusClient {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    return this._request(endpoint, options, DIRECTUS_TOKEN);
+  }
+
+  async getItems<T>(collection: string, params?: Record<string, any>): Promise<DirectusListResponse<T>> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return this.request<DirectusListResponse<T>>(`/items/${collection}${queryString}`);
+  }
+    
+  async getItem<T>(collection: string, id: string): Promise<DirectusResponse<T>> {
+    return this.request<DirectusResponse<T>>(`/items/${collection}/${id}`);
+  }
+}
+
+export const directus = new DirectusUserClient();
+export const directusService = new DirectusServiceClient();

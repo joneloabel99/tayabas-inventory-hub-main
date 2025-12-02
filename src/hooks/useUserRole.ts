@@ -3,28 +3,38 @@ import { useAuth } from "./useAuth";
 
 export type UserRole = "admin" | "manager" | "staff" | "viewer";
 
+// This is the ID for the Administrator role that should have super admin privileges.
+const SUPER_ADMIN_ROLE_ID = "fff05402-13a6-43a4-b961-7d20a307a02e";
+
 export function useUserRole() {
   const { user, loading: authLoading } = useAuth();
 
+  const isSuperAdmin = useMemo(() => {
+    return user?.role?.id === SUPER_ADMIN_ROLE_ID;
+  }, [user]);
+
   // The user role should be available directly from the user object after useAuth is properly integrated
   const role: UserRole | null = useMemo(() => {
-    // Assuming 'role' is a field directly on the Directus User object
-    // Or it might be nested, depending on Directus configuration.
-    // For now, casting it assuming it's directly available.
-    // If user.role is null or undefined, default to 'viewer' or null
-    return (user?.role as UserRole) || null;
-  }, [user]);
+    if (isSuperAdmin) {
+      return "admin"; // Treat super admin as 'admin' for role name purposes
+    }
+    // The user's role is nested in the 'role' object.
+    // We access it via user.role.name
+    return (user?.role?.name as UserRole) || null;
+  }, [user, isSuperAdmin]);
 
   const isLoading = authLoading; // Inherit loading state from useAuth
 
   const hasRole = (requiredRole: UserRole | UserRole[]) => {
+    if (isSuperAdmin) return true; // Super admin has all roles.
     if (!role) return false;
-    
+
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     return roles.includes(role);
   };
 
   const canAccess = (requiredRole: UserRole | UserRole[]) => {
+    if (isSuperAdmin) return true; // Super admin can access anything.
     if (!role) return false;
 
     const roleHierarchy: Record<UserRole, number> = {
@@ -35,17 +45,19 @@ export function useUserRole() {
     };
 
     const userLevel = roleHierarchy[role];
-    const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-    const requiredLevels = requiredRoles.map(r => roleHierarchy[r]);
+    const requiredRoles = Array.isArray(requiredRole)
+      ? requiredRole
+      : [requiredRole];
+    const requiredLevels = requiredRoles.map((r) => roleHierarchy[r]);
     const minRequiredLevel = Math.min(...requiredLevels);
 
     return userLevel >= minRequiredLevel;
   };
 
-  const isAdmin = role === "admin";
-  const isManager = role === "manager";
-  const isStaff = role === "staff";
-  const isViewer = role === "viewer";
+  const isAdmin = isSuperAdmin || role === "admin";
+  const isManager = isSuperAdmin || role === "manager";
+  const isStaff = isSuperAdmin || role === "staff";
+  const isViewer = isSuperAdmin || role === "viewer";
 
   return {
     role,
@@ -56,5 +68,6 @@ export function useUserRole() {
     isManager,
     isStaff,
     isViewer,
+    isSuperAdmin, // Also exporting this for potential direct use
   };
 }

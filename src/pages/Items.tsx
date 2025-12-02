@@ -57,7 +57,7 @@ export default function Items() {
       lastUpdated: new Date().toISOString().split('T')[0],
     };
 
-    createItem(newItem);
+    createItem.mutate(newItem);
     setIsAddDialogOpen(false);
     resetForm();
   };
@@ -86,14 +86,14 @@ export default function Items() {
       lastUpdated: new Date().toISOString().split('T')[0],
     };
 
-    updateItem({ id: selectedItem.id, data: updatedData });
+    updateItem.mutate({ id: selectedItem.id, data: updatedData });
     setIsEditDialogOpen(false);
     resetForm();
   };
 
   const handleDelete = () => {
     if (!selectedItem) return;
-    deleteItem(selectedItem.id);
+    deleteItem.mutate(selectedItem.id);
     setIsDeleteDialogOpen(false);
     setSelectedItem(null);
   };

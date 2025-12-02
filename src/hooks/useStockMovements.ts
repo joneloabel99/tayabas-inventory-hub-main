@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { directus } from "@/lib/directus";
+import { directus, directusService } from "@/lib/directus";
 import { toast } from "sonner";
 import { StockMovement } from "@/types";
 import { useAuth } from "./useAuth";
@@ -13,7 +13,7 @@ export function useStockMovements(type?: 'received' | 'issued') {
     queryFn: async () => {
       try {
         const params = type ? { filter: JSON.stringify({ type: { _eq: type } }) } : {};
-        const response = await directus.getItems<StockMovement>('stock_movements', params);
+        const response = await directusService.getItems<StockMovement>('stock_movements', params);
         return response.data;
       } catch (error) {
         console.error('Failed to fetch movements:', error);
@@ -58,4 +58,3 @@ export function useStockMovements(type?: 'received' | 'issued') {
     deleteMovement,
   };
 }
-

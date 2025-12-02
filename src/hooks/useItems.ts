@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { directus } from "@/lib/directus";
+import { directus, directusService } from "@/lib/directus";
 import { toast } from "sonner";
 import { InventoryItem } from "@/types";
 import { useAuth } from "./useAuth";
@@ -12,8 +12,9 @@ export function useItems() {
     queryKey: ['items'],
     queryFn: async () => {
       try {
-        const response = await directus.getItems<InventoryItem>('items');
-        return response.data;
+        // Use the service client for fetching items to bypass user permission issues
+        const response = await directusService.getItems<InventoryItem>('items');
+        return response.data.map(item => ({ ...item, id: String(item.id) }));
       } catch (error) {
         console.error('Failed to fetch items:', error);
         toast.error('Failed to load items from Directus');
