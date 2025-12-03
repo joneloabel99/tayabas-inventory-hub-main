@@ -12,7 +12,7 @@ import { useItems } from "@/hooks/useItems";
 import { useStockMovements } from "@/hooks/useStockMovements";
 
 export default function StockReceiving() {
-  const { items } = useItems();
+  const { items, updateItem } = useItems();
   const { movements, createMovement } = useStockMovements('received');
 
   const [formData, setFormData] = useState({
@@ -43,6 +43,24 @@ export default function StockReceiving() {
     };
 
     createMovement.mutate(newMovement);
+
+    // Update the item's quantity and status
+    const newQuantity = selectedItem.quantity + parseInt(formData.quantity);
+    const newTotalValue = newQuantity * selectedItem.unitCost;
+    const newStatus: "In Stock" | "Low Stock" | "Out of Stock" = 
+      newQuantity === 0 ? "Out of Stock" : 
+      newQuantity <= selectedItem.reorderLevel ? "Low Stock" : 
+      "In Stock";
+
+    updateItem.mutate({
+      id: selectedItem.id,
+      data: {
+        quantity: newQuantity,
+        totalValue: newTotalValue,
+        status: newStatus,
+        lastUpdated: new Date().toISOString().split('T')[0],
+      },
+    });
     
     // Reset form
     setFormData({
