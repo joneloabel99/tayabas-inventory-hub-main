@@ -1,54 +1,62 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { RoleGuard } from "@/components/RoleGuard";
-import Auth from "@/pages/Auth";
-import Custodians from "@/pages/Custodians";
-import Dashboard from "@/pages/Dashboard";
-import DepartmentRequests from "@/pages/DepartmentRequests";
-import Items from "@/pages/Items";
-import NotFound from "@/pages/NotFound";
-import PhysicalCountNew from "@/pages/PhysicalCountNew";
-import Settings from "@/pages/Settings";
-import StockCardNew from "@/pages/StockCardNew";
-import StockIssuance from "@/pages/StockIssuance";
-import StockReceiving from "@/pages/StockReceiving";
-import UserRoles from "@/pages/UserRoles";
-import CustodianDetail from "@/pages/CustodianDetail";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { AppLayout } from "./components/layout/AppLayout";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import Items from "./pages/Items";
+import StockReceiving from "./pages/StockReceiving";
+import StockIssuance from "./pages/StockIssuance";
+import Custodians from "./pages/Custodians";
+import CustodianDetail from "./pages/CustodianDetail";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import DepartmentRequests from "./pages/DepartmentRequests";
+import PhysicalCounts from "./pages/PhysicalCounts";
+import UserRoles from "./pages/UserRoles";
+import StockCard from "./pages/StockCard";
+import StockCardNew from "./pages/StockCardNew";
+import PhysicalCountDetail from "./pages/PhysicalCountDetail";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/items" element={<RoleGuard allowedRoles={["admin", "manager", "staff"]}><Items /></RoleGuard>} />
-            <Route path="/receiving" element={<RoleGuard allowedRoles={["admin", "manager", "staff"]}><StockReceiving /></RoleGuard>} />
-            <Route path="/issuance" element={<RoleGuard allowedRoles={["admin", "manager", "staff"]}><StockIssuance /></RoleGuard>} />
-            <Route path="/custodians" element={<Custodians />} />
-            <Route path="/custodians/:id" element={<CustodianDetail />} />
-            <Route path="/stock-card" element={<StockCardNew />} />
-            <Route path="/physical-count" element={<RoleGuard allowedRoles={["admin", "manager", "staff"]}><PhysicalCountNew /></RoleGuard>} />
-            <Route path="/requests" element={<RoleGuard allowedRoles={["admin", "manager"]}><DepartmentRequests /></RoleGuard>} />
-            <Route path="/users" element={<RoleGuard allowedRoles={["admin"]}><UserRoles /></RoleGuard>} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Router>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="items" element={<Items />} />
+              <Route path="stock-receiving" element={<StockReceiving />} />
+              <Route path="stock-issuance" element={<StockIssuance />} />
+              <Route path="custodians" element={<Custodians />} />
+              <Route path="custodians/:id" element={<CustodianDetail />} />
+              <Route path="department-requests" element={<DepartmentRequests />} />
+              <Route path="physical-count" element={<PhysicalCounts />} />
+              <Route path="physical-count/:id" element={<PhysicalCountDetail />} />
+              <Route path="stock-card" element={<StockCardNew />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="user-roles" element={<UserRoles />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </Router>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

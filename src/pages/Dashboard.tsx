@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Package, TrendingUp, AlertTriangle, PackagePlus, PackageMinus, Users, FileText, CheckCircle } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,54 +7,108 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from "recharts";
 import { useItems } from "@/hooks/useItems";
+import { useStockMovements } from "@/hooks/useStockMovements";
+import { useCustodians } from "@/hooks/useCustodians";
+import { useDepartmentRequests } from "@/hooks/useDepartmentRequests";
+import { usePhysicalCounts } from "@/hooks/usePhysicalCounts";
 
-// Mock chart data for now - can be replaced with real data from Directus
-const monthlyStockMovement = [
-  { month: "Jul", received: 150, issued: 120 },
-  { month: "Aug", received: 180, issued: 145 },
-  { month: "Sep", received: 165, issued: 150 },
-  { month: "Oct", received: 200, issued: 170 },
-  { month: "Nov", received: 220, issued: 190 },
-  { month: "Dec", received: 195, issued: 175 },
-  { month: "Jan", received: 210, issued: 160 },
-];
-
-const categoryDistribution = [
-  { name: "Office Supplies", value: 450, fill: "hsl(var(--chart-1))" },
-  { name: "Equipment", value: 180, fill: "hsl(var(--chart-2))" },
-  { name: "PPE", value: 280, fill: "hsl(var(--chart-3))" },
-  { name: "Cleaning Supplies", value: 150, fill: "hsl(var(--chart-4))" },
-  { name: "Others", value: 90, fill: "hsl(var(--chart-5))" },
-];
-
-const topIssuedItems = [
-  { name: "A4 Bond Paper", count: 450 },
-  { name: "Ballpoint Pen", count: 380 },
-  { name: "Folder", count: 320 },
-  { name: "Stapler Wire", count: 280 },
-  { name: "Printer Ink", count: 250 },
-  { name: "Envelope", count: 220 },
-  { name: "Tape", count: 180 },
-  { name: "Paper Clip", count: 160 },
-  { name: "Rubber Band", count: 140 },
-  { name: "Correction Fluid", count: 120 },
-];
-
-const custodianAssets = [
-  { name: "Human Resources", value: 45, fill: "hsl(var(--chart-1))" },
-  { name: "Finance", value: 32, fill: "hsl(var(--chart-2))" },
-  { name: "IT Department", value: 28, fill: "hsl(var(--chart-3))" },
-  { name: "Engineering", value: 25, fill: "hsl(var(--chart-4))" },
-  { name: "Others", value: 20, fill: "hsl(var(--chart-5))" },
-];
+const formatCurrencyValue = (value: number) => {
+  if (value === 0) return "₱0";
+  if (Math.abs(value) >= 1_000_000_000) {
+    return `₱${(value / 1_000_000_000).toFixed(2)}B`;
+  }
+  if (Math.abs(value) >= 1_000_000) {
+    return `₱${(value / 1_000_000).toFixed(2)}M`;
+  }
+  if (Math.abs(value) >= 1_000) {
+    return `₱${(value / 1_000).toFixed(0)}K`;
+  }
+  return `₱${value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+};
 
 export default function Dashboard() {
-  const { items, isLoading } = useItems();
-  
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalValue = items.reduce((sum, item) => sum + item.totalValue, 0);
-  const lowStockCount = items.filter(item => item.quantity <= item.reorderLevel).length;
-  
+  const { items, isLoading: itemsLoading } = useItems();
+  const { movements, isLoading: movementsLoading } = useStockMovements();
+  const { custodians, isLoading: custodiansLoading } = useCustodians();
+  const { requests, isLoading: requestsLoading } = useDepartmentRequests();
+  const { counts: physicalCounts, isLoading: countsLoading } = usePhysicalCounts();
+
+  const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+  const totalValue = useMemo(() => items.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0), [items]);
+  const lowStockCount = useMemo(() => items.filter(item => item.quantity <= item.reorderLevel).length, [items]);
+
+  const dashboardStats = useMemo(() => {
+    const today = new Date().toDateString();
+    const issuedToday = movements.filter(m => m.type === 'issued' && new Date(m.date).toDateString() === today).reduce((sum, m) => sum + m.quantity, 0);
+    const receivedToday = movements.filter(m => m.type === 'received' && new Date(m.date).toDateString() === today).reduce((sum, m) => sum + m.quantity, 0);
+    const pendingRis = requests.filter(r => r.status === 'pending').length;
+    const activeCustodians = custodians.length;
+    const now = new Date();
+    const completedCountsThisMonth = physicalCounts.filter(c => c.status === 'Completed' && new Date(c.countDate).getMonth() === now.getMonth() && new Date(c.countDate).getFullYear() === now.getFullYear()).length;
+
+    return { issuedToday, receivedToday, pendingRis, activeCustodians, completedCountsThisMonth };
+  }, [movements, custodians, requests, physicalCounts]);
+
+  const monthlyStockData = useMemo(() => {
+    const monthMap: { [key: string]: { received: number, issued: number } } = {};
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    movements.forEach(m => {
+        const date = new Date(m.date);
+        const monthKey = monthNames[date.getMonth()];
+        if (!monthMap[monthKey]) {
+            monthMap[monthKey] = { received: 0, issued: 0 };
+        }
+        if (m.type === 'received') {
+            monthMap[monthKey].received += m.quantity;
+        } else {
+            monthMap[monthKey].issued += m.quantity;
+        }
+    });
+
+    return monthNames.map(month => ({ month, ... (monthMap[month] || { received: 0, issued: 0 }) }));
+  }, [movements]);
+
+  const categoryDistData = useMemo(() => {
+    const categoryMap: { [key: string]: number } = {};
+    items.forEach(item => {
+        if (!categoryMap[item.category]) {
+            categoryMap[item.category] = 0;
+        }
+        categoryMap[item.category] += item.quantity;
+    });
+    const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+    return Object.entries(categoryMap).map(([name, value], index) => ({ name, value, fill: COLORS[index % COLORS.length] }));
+  }, [items]);
+
+  const topIssuedData = useMemo(() => {
+    const itemMap: { [key: string]: number } = {};
+    movements.filter(m => m.type === 'issued' && m.item).forEach(m => {
+        const itemName = (m.item as any).itemName;
+        if (!itemMap[itemName]) {
+            itemMap[itemName] = 0;
+        }
+        itemMap[itemName] += m.quantity;
+    });
+    return Object.entries(itemMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+  }, [movements]);
+
+  const custodianAssetData = useMemo(() => {
+    const departmentMap: { [key: string]: number } = {};
+    movements.filter(m => m.type === 'issued' && m.custodian).forEach(m => {
+        const department = (m.custodian as any).department;
+        if (!departmentMap[department]) {
+            departmentMap[department] = 0;
+        }
+        departmentMap[department] += m.quantity;
+    });
+    const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+    return Object.entries(departmentMap).map(([name, value], index) => ({ name, value, fill: COLORS[index % COLORS.length] }));
+  }, [movements]);
+
   const lowStockItems = items
     .filter(item => item.quantity <= item.reorderLevel)
     .sort((a, b) => (a.quantity / a.reorderLevel) - (b.quantity / b.reorderLevel));
@@ -68,68 +123,18 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Total Items"
-          value={totalItems.toLocaleString()}
-          subtitle="Across all categories"
-          icon={Package}
-          trend={{ value: 12, isPositive: true }}
-          variant="default"
-        />
-        <StatsCard
-          title="Total Stock Value"
-          value={`₱${(totalValue / 1000000).toFixed(2)}M`}
-          subtitle="Current inventory worth"
-          icon={TrendingUp}
-          trend={{ value: 8, isPositive: true }}
-          variant="success"
-        />
-        <StatsCard
-          title="Low Stock Alerts"
-          value={lowStockCount}
-          subtitle="Items need reordering"
-          icon={AlertTriangle}
-          variant="warning"
-        />
-        <StatsCard
-          title="Active Custodians"
-          value={45}
-          subtitle="Asset holders"
-          icon={Users}
-          variant="default"
-        />
+        <StatsCard title="Total Items" value={totalItems.toLocaleString()} subtitle="Across all categories" icon={Package} variant="default" />
+        <StatsCard title="Total Stock Value" value={formatCurrencyValue(totalValue)} subtitle="Current inventory worth" icon={TrendingUp} variant="success" />
+        <StatsCard title="Low Stock Alerts" value={lowStockCount} subtitle="Items need reordering" icon={AlertTriangle} variant="warning" />
+        <StatsCard title="Active Custodians" value={dashboardStats.activeCustodians} subtitle="Asset holders" icon={Users} variant="default" />
       </div>
 
       {/* Second Stats Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Items Issued Today"
-          value={23}
-          subtitle="RIS processed"
-          icon={PackageMinus}
-          variant="default"
-        />
-        <StatsCard
-          title="Items Received Today"
-          value={15}
-          subtitle="Stock added"
-          icon={PackagePlus}
-          variant="success"
-        />
-        <StatsCard
-          title="Pending RIS"
-          value={8}
-          subtitle="Awaiting approval"
-          icon={FileText}
-          variant="warning"
-        />
-        <StatsCard
-          title="Physical Counts"
-          value={12}
-          subtitle="Completed this month"
-          icon={CheckCircle}
-          variant="success"
-        />
+        <StatsCard title="Items Issued Today" value={dashboardStats.issuedToday} subtitle="RIS processed" icon={PackageMinus} variant="default" />
+        <StatsCard title="Items Received Today" value={dashboardStats.receivedToday} subtitle="Stock added" icon={PackagePlus} variant="success" />
+        <StatsCard title="Pending RIS" value={dashboardStats.pendingRis} subtitle="Awaiting approval" icon={FileText} variant="warning" />
+        <StatsCard title="Physical Counts" value={dashboardStats.completedCountsThisMonth} subtitle="Completed this month" icon={CheckCircle} variant="success" />
       </div>
 
       {/* Charts Grid */}
@@ -141,39 +146,14 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyStockMovement}>
+              <LineChart data={monthlyStockData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="month" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px",
-                  }}
-                />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px" }} />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="received" 
-                  stroke="hsl(var(--success))" 
-                  strokeWidth={2}
-                  name="Received"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="issued" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  name="Issued"
-                />
+                <Line type="monotone" dataKey="received" stroke="hsl(var(--success))" strokeWidth={2} name="Received" />
+                <Line type="monotone" dataKey="issued" stroke="hsl(var(--primary))" strokeWidth={2} name="Issued" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -187,27 +167,12 @@ export default function Dashboard() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie
-                  data={categoryDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {categoryDistribution.map((entry, index) => (
+                <Pie data={categoryDistData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
+                  {categoryDistData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px",
-                  }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px" }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -220,23 +185,11 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topIssuedItems} layout="horizontal">
+              <BarChart data={topIssuedData} layout="vertical" margin={{ left: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis 
-                  type="category" 
-                  dataKey="name" 
-                  width={120}
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={11}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px",
-                  }}
-                />
+                <YAxis type="category" dataKey="name" width={100} stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px" }} />
                 <Bar dataKey="count" fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
@@ -251,28 +204,12 @@ export default function Dashboard() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie
-                  data={custodianAssets}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  paddingAngle={5}
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
-                >
-                  {custodianAssets.map((entry, index) => (
+                <Pie data={custodianAssetData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} fill="#8884d8" paddingAngle={5} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                  {custodianAssetData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "6px",
-                  }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "6px" }} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>

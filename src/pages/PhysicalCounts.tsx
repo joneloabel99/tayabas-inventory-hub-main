@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ClipboardCheck, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +12,11 @@ import { toast } from "sonner";
 import { PhysicalCount } from "@/types";
 import { usePhysicalCounts } from "@/hooks/usePhysicalCounts";
 
-export default function PhysicalCountNew() {
-  const { counts, isLoading, createCount } = usePhysicalCounts();
+export default function PhysicalCounts() {
+  const { counts, isLoading, createCount, startCount } = usePhysicalCounts();
   const [searchQuery, setSearchQuery] = useState("");
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     countDate: "",
     countedBy: "",
@@ -108,7 +110,17 @@ export default function PhysicalCountNew() {
               </thead>
               <tbody>
                 {filteredCounts.map((count) => (
-                  <tr key={count.id} className="border-b border-border hover:bg-muted/50 transition-colors">
+                  <tr key={count.id} onClick={() => {
+                    if (count.status === "Scheduled") {
+                      startCount(count.id, {
+                        onSuccess: () => {
+                          navigate(`/physical-count/${count.id}`);
+                        },
+                      });
+                    } else {
+                      navigate(`/physical-count/${count.id}`);
+                    }
+                  }} className="border-b border-border hover:bg-muted/50 transition-colors cursor-pointer">
                     <td className="py-3 px-4 text-sm">{count.countDate}</td>
                     <td className="py-3 px-4 text-sm font-medium">{count.location}</td>
                     <td className="py-3 px-4 text-sm">{count.countedBy}</td>

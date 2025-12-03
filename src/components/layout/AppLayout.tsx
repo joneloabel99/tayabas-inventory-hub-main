@@ -22,13 +22,13 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Items Management", href: "/items", icon: Package },
-  { name: "Stock Receiving", href: "/receiving", icon: PackagePlus },
-  { name: "Stock Issuance", href: "/issuance", icon: PackageMinus },
+  { name: "Stock Receiving", href: "/stock-receiving", icon: PackagePlus },
+  { name: "Stock Issuance", href: "/stock-issuance", icon: PackageMinus },
   { name: "Custodians", href: "/custodians", icon: Users },
   { name: "Stock Card", href: "/stock-card", icon: FileText },
   { name: "Physical Count", href: "/physical-count", icon: ClipboardCheck },
-  { name: "Department Requests", href: "/requests", icon: FileText },
-  { name: "User Roles", href: "/users", icon: Users },
+  { name: "Department Requests", href: "/department-requests", icon: FileText },
+  { name: "User Roles", href: "/user-roles", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

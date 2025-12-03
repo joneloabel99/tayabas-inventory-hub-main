@@ -23,7 +23,7 @@ export function usePhysicalCounts() {
     enabled: !!user,
   });
 
-  const createCount = useMutation({
+  const { mutate: createCount } = useMutation({
     mutationFn: (newCount: Partial<PhysicalCount>) =>
       directus.createItem<PhysicalCount>('physical_counts', newCount),
     onSuccess: () => {
@@ -35,9 +35,23 @@ export function usePhysicalCounts() {
     },
   });
 
+  const { mutate: startCount } = useMutation({
+    mutationFn: (countId: string) =>
+      directus.updateItem<PhysicalCount>('physical_counts', countId, { status: 'In Progress' }),
+    onSuccess: (_, countId) => {
+      queryClient.invalidateQueries({ queryKey: ['physical_counts'] });
+      queryClient.invalidateQueries({ queryKey: ['physical_counts', countId] });
+      toast.success('Physical count started');
+    },
+    onError: () => {
+      toast.error('Failed to start physical count');
+    },
+  });
+
   return {
     counts,
     isLoading,
     createCount,
+    startCount,
   };
 }

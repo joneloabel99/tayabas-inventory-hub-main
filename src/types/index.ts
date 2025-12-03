@@ -58,6 +58,14 @@ export interface RequestItem {
   purpose: string;
 }
 
+export interface PhysicalCountItem {
+  item_id: string;
+  itemName?: string;
+  counted_quantity: number;
+  system_quantity: number;
+  discrepancy?: number;
+}
+
 export interface PhysicalCount {
   id: string;
   countDate: string;
@@ -67,4 +75,5 @@ export interface PhysicalCount {
   itemsCounted: number;
   discrepanciesFound: number;
   notes: string;
+  items?: PhysicalCountItem[];
 }

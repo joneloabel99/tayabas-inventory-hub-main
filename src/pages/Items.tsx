@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,43 @@ export default function Items() {
     reorderLevel: "",
     location: "",
   });
+
+  useEffect(() => {
+    if (!isAddDialogOpen) return;
+
+    const category = formData.category;
+    if (!category || !items) return;
+
+    const prefixMap: { [key: string]: string } = {
+      "Office Supplies": "OS",
+      "Equipment": "EQ",
+      "PPE": "PPE",
+      "Cleaning Supplies": "CS",
+    };
+
+    const prefix = prefixMap[category];
+    if (!prefix) {
+      setFormData(prev => ({ ...prev, itemCode: "" }));
+      return;
+    }
+
+    let maxId = 0;
+    items.forEach(item => {
+      if (item.itemCode.startsWith(prefix + "-")) {
+        const idPart = item.itemCode.split('-')[1];
+        const idNum = parseInt(idPart, 10);
+        if (!isNaN(idNum) && idNum > maxId) {
+          maxId = idNum;
+        }
+      }
+    });
+    
+    const nextId = maxId + 1;
+    const newItemCode = `${prefix}-${String(nextId).padStart(3, '0')}`;
+
+    setFormData(prev => ({ ...prev, itemCode: newItemCode }));
+
+  }, [formData.category, items, isAddDialogOpen]);
 
   const filteredItems = items.filter(item =>
     item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -250,6 +287,7 @@ export default function Items() {
                   value={formData.itemCode}
                   onChange={(e) => setFormData({ ...formData, itemCode: e.target.value })}
                   placeholder="OFF-001"
+                  disabled
                 />
               </div>
               <div className="space-y-2">

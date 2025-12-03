@@ -45,10 +45,26 @@ export default function StockCardNew() {
   const stockCardEntries = useMemo(() => {
     if (!selectedItem || !selectedItemData || !movements) return [];
 
+    console.log("All movements from hook:", movements);
+    console.log("Selected Item ID:", selectedItem);
+
     const sortedMovements = [...movements]
-      .filter(m => m.item && m.item.id === selectedItem)
+      .filter(m => {
+        if (!m.item) {
+          console.log("Movement filtered out (no item property):", m.type, m);
+          return false;
+        }
+        const itemId = typeof m.item === 'object' ? (m.item as any).id : m.item;
+        const isMatch = String(itemId) === selectedItem;
+        if (!isMatch) {
+            console.log("Movement filtered out (item ID mismatch):", m.type, `Movement Item ID: ${itemId}`, `Selected Item ID: ${selectedItem}`, m);
+        }
+        return isMatch;
+      })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+    console.log("Filtered & Sorted Movements for this item:", sortedMovements);
+    
     let runningBalance = 0;
     const entries: StockCardEntry[] = [];
 
@@ -68,10 +84,11 @@ export default function StockCardNew() {
         balance: runningBalance,
         unitCost: selectedItemData.unitCost,
         totalValue: runningBalance * selectedItemData.unitCost,
-        remarks: movement.custodian 
-          ? `Custodian: ${movement.custodian.name}`
-          : '',
-      });
+                remarks: movement.type === 'received'
+                  ? `Received on: ${format(new Date(movement.date), 'yyyy-MM-dd')}`
+                  : movement.custodian
+                    ? `Issued to: ${movement.custodian.name}`
+                    : '',      });
     });
 
     return entries;

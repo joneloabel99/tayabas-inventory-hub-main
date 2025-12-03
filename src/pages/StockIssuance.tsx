@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PackageMinus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,8 @@ import { useCustodians } from "@/hooks/useCustodians";
 
 export default function StockIssuance() {
   const { items, updateItem } = useItems();
-  const { movements, createMovement } = useStockMovements('issued');
+  const { movements: issuedMovements, createMovement } = useStockMovements('issued');
+  const { movements: allMovements } = useStockMovements();
   const { custodians } = useCustodians();
 
   const [formData, setFormData] = useState({
@@ -27,9 +28,23 @@ export default function StockIssuance() {
     notes: "",
   });
 
+  useEffect(() => {
+    if (allMovements) {
+      const currentYear = new Date().getFullYear();
+      const nextId = allMovements.length + 1;
+      const newRisNo = `RIS-${currentYear}-${String(nextId).padStart(4, '0')}`;
+      setFormData(prev => ({ ...prev, reference: newRisNo }));
+    }
+  }, [allMovements]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (allMovements.some((movement) => movement.reference === formData.reference)) {
+      toast.error("RIS No. already exists.");
+      return;
+    }
+
     const selectedItem = items.find(item => item.id === formData.itemId);
     const selectedCustodian = custodians.find(c => c.id === formData.custodianId);
     
@@ -170,6 +185,7 @@ export default function StockIssuance() {
                   onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
                   placeholder="RIS-2024-001"
                   required
+                  disabled
                 />
               </div>
 
@@ -212,12 +228,12 @@ export default function StockIssuance() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {movements.length === 0 ? (
+              {issuedMovements.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No issuances recorded yet
                 </div>
               ) : (
-                movements.slice(0, 10).map((movement) => {
+                issuedMovements.slice(0, 10).map((movement) => {
                   const foundCustodian = custodians.find(c => c.id === String(movement.custodian?.id));
                   return (
                     <div

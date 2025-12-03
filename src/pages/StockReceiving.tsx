@@ -13,7 +13,8 @@ import { useStockMovements } from "@/hooks/useStockMovements";
 
 export default function StockReceiving() {
   const { items, updateItem } = useItems();
-  const { movements, createMovement } = useStockMovements('received');
+  const { movements: receivedMovements, createMovement } = useStockMovements('received');
+  const { movements: allMovements } = useStockMovements();
 
   const [formData, setFormData] = useState({
     itemId: "",
@@ -27,6 +28,11 @@ export default function StockReceiving() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (allMovements.some((movement) => movement.reference === formData.reference)) {
+      toast.error("Reference No. (PO/DR) already exists.");
+      return;
+    }
+
     const selectedItem = items.find(item => item.id === formData.itemId);
     if (!selectedItem) {
       toast.error("Please select an item");
@@ -34,7 +40,7 @@ export default function StockReceiving() {
     }
 
     const newMovement = {
-      itemId: formData.itemId,
+      item: { id: formData.itemId },
       itemName: selectedItem.itemName,
       type: "received" as const,
       quantity: parseInt(formData.quantity),
@@ -183,12 +189,12 @@ export default function StockReceiving() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {movements.length === 0 ? (
+              {receivedMovements.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No receipts recorded yet
                 </div>
               ) : (
-                movements.slice(0, 10).map((movement) => (
+                receivedMovements.slice(0, 10).map((movement) => (
                   <div
                     key={movement.id}
                     className="flex items-start gap-3 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
