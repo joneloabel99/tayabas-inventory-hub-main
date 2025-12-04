@@ -19,6 +19,8 @@ import UserRoles from "./pages/UserRoles";
 import StockCard from "./pages/StockCard";
 import StockCardNew from "./pages/StockCardNew";
 import PhysicalCountDetail from "./pages/PhysicalCountDetail";
+import { RoleGuard } from "./components/RoleGuard";
+import { PERMISSIONS } from "./config/rolePermissions";
 
 const queryClient = new QueryClient();
 
@@ -37,18 +39,18 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
-              <Route path="items" element={<Items />} />
-              <Route path="stock-receiving" element={<StockReceiving />} />
-              <Route path="stock-issuance" element={<StockIssuance />} />
-              <Route path="custodians" element={<Custodians />} />
-              <Route path="custodians/:id" element={<CustodianDetail />} />
-              <Route path="department-requests" element={<DepartmentRequests />} />
-              <Route path="physical-count" element={<PhysicalCounts />} />
-              <Route path="physical-count/:id" element={<PhysicalCountDetail />} />
-              <Route path="stock-card" element={<StockCardNew />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="user-roles" element={<UserRoles />} />
+              <Route index element={<RoleGuard permission={PERMISSIONS.DASHBOARD}><Dashboard /></RoleGuard>} />
+              <Route path="items" element={<RoleGuard permission={PERMISSIONS.ITEMS_MANAGEMENT}><Items /></RoleGuard>} />
+              <Route path="stock-receiving" element={<RoleGuard permission={PERMISSIONS.STOCK_RECEIVING}><StockReceiving /></RoleGuard>} />
+              <Route path="stock-issuance" element={<RoleGuard permission={PERMISSIONS.STOCK_ISSUANCE}><StockIssuance /></RoleGuard>} />
+              <Route path="custodians" element={<RoleGuard permission={PERMISSIONS.CUSTODIANS}><Custodians /></RoleGuard>} />
+              <Route path="custodians/:id" element={<RoleGuard permission={PERMISSIONS.CUSTODIANS}><CustodianDetail /></RoleGuard>} />
+              <Route path="department-requests" element={<RoleGuard permission={PERMISSIONS.DEPT_REQUESTS}><DepartmentRequests /></RoleGuard>} />
+              <Route path="physical-count" element={<RoleGuard permission={PERMISSIONS.PHYSICAL_COUNT}><PhysicalCounts /></RoleGuard>} />
+              <Route path="physical-count/:id" element={<RoleGuard permission={PERMISSIONS.PHYSICAL_COUNT}><PhysicalCountDetail /></RoleGuard>} />
+              <Route path="stock-card" element={<RoleGuard permission={PERMISSIONS.STOCK_CARD}><StockCardNew /></RoleGuard>} />
+              <Route path="settings" element={<RoleGuard permission={PERMISSIONS.SETTINGS}><Settings /></RoleGuard>} />
+              <Route path="user-roles" element={<RoleGuard permission={PERMISSIONS.USER_ROLES}><UserRoles /></RoleGuard>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

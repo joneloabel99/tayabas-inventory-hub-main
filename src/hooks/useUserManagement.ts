@@ -24,7 +24,7 @@ export function useUserManagement() {
       try {
         const response = await directusService.getAllUsers<any>({
           // You might need to specify fields to fetch related data like role and department
-          fields: 'id,first_name,last_name,email,role', 
+          fields: 'id,first_name,last_name,email,role,department,last_access', 
         });
         return response.data.map(userItem => ({
           ...userItem,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User,
   Lock,
@@ -20,14 +20,18 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { DepartmentCombobox } from "@/components/ui/DepartmentCombobox";
 
 export default function Settings() {
   const { user } = useAuth();
   const { profile, updateProfile, updatePassword } = useProfile();
   const { role } = useUserRole();
 
+  console.log('Current user role:', role);
+
   const [profileForm, setProfileForm] = useState({
-    fullName: "",
+    first_name: "",
+    last_name: "",
     department: "",
   });
 
@@ -39,22 +43,19 @@ export default function Settings() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Update form when profile loads
-  useState(() => {
+  useEffect(() => {
     if (profile) {
       setProfileForm({
-        fullName: profile.full_name || "",
+        first_name: profile.first_name || "",
+        last_name: profile.last_name || "",
         department: profile.department || "",
       });
     }
-  });
+  }, [profile]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateProfile.mutateAsync({
-      fullName: profileForm.fullName,
-      department: profileForm.department,
-    });
+    await updateProfile.mutateAsync(profileForm);
   };
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
@@ -113,16 +114,29 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleProfileUpdate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    value={profileForm.fullName}
-                    onChange={(e) =>
-                      setProfileForm({ ...profileForm, fullName: e.target.value })
-                    }
-                    placeholder="Enter your full name"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={profileForm.first_name}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, first_name: e.target.value })
+                      }
+                      placeholder="Enter your first name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={profileForm.last_name}
+                      onChange={(e) =>
+                        setProfileForm({ ...profileForm, last_name: e.target.value })
+                      }
+                      placeholder="Enter your last name"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -141,13 +155,11 @@ export default function Settings() {
 
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
+                  <DepartmentCombobox
                     value={profileForm.department}
-                    onChange={(e) =>
-                      setProfileForm({ ...profileForm, department: e.target.value })
+                    onChange={(value) =>
+                      setProfileForm({ ...profileForm, department: value })
                     }
-                    placeholder="Enter your department"
                   />
                 </div>
 
@@ -298,7 +310,7 @@ export default function Settings() {
                   <div className="flex-1">
                     <p className="text-sm font-medium">Full Name</p>
                     <p className="text-sm text-muted-foreground">
-                      {profile?.full_name || "Not set"}
+                      {`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Not Set'}
                     </p>
                   </div>
                 </div>

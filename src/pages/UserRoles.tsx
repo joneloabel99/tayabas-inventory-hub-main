@@ -4,16 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useUserManagement } from "@/hooks/useUserManagement";
+import { DepartmentCombobox } from "@/components/ui/DepartmentCombobox";
 
 export default function UserRoles() {
   const { users, isLoading, updateProfile, updateRole } = useUserManagement();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    fullName: "",
+    first_name: "",
+    last_name: "",
     department: "",
     role: "",
   });
@@ -24,7 +27,8 @@ export default function UserRoles() {
     try {
       await updateProfile.mutateAsync({
         userId: selectedUserId,
-        fullName: formData.fullName,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         department: formData.department,
       });
 
@@ -43,7 +47,8 @@ export default function UserRoles() {
   const openEditDialog = (user: any) => {
     setSelectedUserId(user.id);
     setFormData({
-      fullName: ((user.first_name || '') + ' ' + (user.last_name || '')).trim(),
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
       department: user.department || "",
       role: user.role,
     });
@@ -52,7 +57,8 @@ export default function UserRoles() {
 
   const resetForm = () => {
     setFormData({
-      fullName: "",
+      first_name: "",
+      last_name: "",
       department: "",
       role: "",
     });
@@ -131,7 +137,7 @@ export default function UserRoles() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Role</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Department</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Last Login</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Last Access</th>
                   <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
@@ -154,7 +160,9 @@ export default function UserRoles() {
                         Active
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">-</td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">
+                      {user.last_access ? new Date(user.last_access).toLocaleString() : 'N/A'}
+                    </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center justify-center gap-2">
                         <Button
@@ -177,19 +185,28 @@ export default function UserRoles() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="overflow-visible">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Full Name</Label>
-              <input
-                id="edit-name"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              <Label htmlFor="edit-first-name">First Name</Label>
+              <Input
+                id="edit-first-name"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-last-name">Last Name</Label>
+              <Input
+                id="edit-last-name"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              />
+            </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-role">Role</Label>
@@ -207,18 +224,10 @@ export default function UserRoles() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-department">Department</Label>
-              <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="GSO">General Services Office</SelectItem>
-                  <SelectItem value="Human Resources">Human Resources</SelectItem>
-                  <SelectItem value="Finance">Finance</SelectItem>
-                  <SelectItem value="IT Department">IT Department</SelectItem>
-                  <SelectItem value="Engineering">Engineering</SelectItem>
-                </SelectContent>
-              </Select>
+              <DepartmentCombobox 
+                value={formData.department}
+                onChange={(value) => setFormData({ ...formData, department: value })}
+              />
             </div>
           </div>
           <DialogFooter>

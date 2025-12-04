@@ -9,6 +9,8 @@ export interface DirectusUser {
   email: string;
   first_name: string;
   last_name?: string;
+  full_name?: string; // Added full_name
+  created_at?: string; // Added created_at
   role: {
     id: string;
     name: string;
@@ -27,7 +29,11 @@ export function useAuth() {
       if (token) {
         try {
           const response = await directus.getMe();
-          setUser(response.data);
+          const fetchedUser: DirectusUser = {
+            ...response.data,
+            full_name: `${response.data.first_name || ''} ${response.data.last_name || ''}`.trim(),
+          };
+          setUser(fetchedUser);
         } catch (error) {
           console.error("Failed to verify user from token:", error);
           localStorage.removeItem("directus_access_token");
@@ -48,6 +54,7 @@ export function useAuth() {
         email: email, // Directus usually returns email in user data
         first_name: response.data.first_name || "User", // Assuming first_name is available
         last_name: response.data.last_name,
+        full_name: `${response.data.first_name || ''} ${response.data.last_name || ''}`.trim(),
         role: response.data.role || null,
       };
       setUser(fetchedUser);

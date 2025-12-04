@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useItems } from "@/hooks/useItems";
 import { DepartmentRequest } from "@/types";
 import { useDepartmentRequests } from "@/hooks/useDepartmentRequests";
+import { DepartmentCombobox } from "@/components/ui/DepartmentCombobox";
 
 export default function DepartmentRequests() {
   const { items } = useItems();
@@ -212,18 +213,10 @@ export default function DepartmentRequests() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="department">Department</Label>
-              <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Human Resources">Human Resources</SelectItem>
-                  <SelectItem value="Finance">Finance</SelectItem>
-                  <SelectItem value="IT Department">IT Department</SelectItem>
-                  <SelectItem value="Engineering">Engineering</SelectItem>
-                  <SelectItem value="Legal">Legal</SelectItem>
-                </SelectContent>
-              </Select>
+              <DepartmentCombobox 
+                value={formData.department}
+                onChange={(value) => setFormData({ ...formData, department: value })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="requestedBy">Requested By</Label>

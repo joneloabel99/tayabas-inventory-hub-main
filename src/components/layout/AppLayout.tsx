@@ -18,18 +18,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { PERMISSIONS, rolePermissions, ROLES } from "@/config/rolePermissions";
+
+const SUPER_ADMIN_ROLE_ID = "fff05402-13a6-43a4-b961-7d20a307a02e";
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Items Management", href: "/items", icon: Package },
-  { name: "Stock Receiving", href: "/stock-receiving", icon: PackagePlus },
-  { name: "Stock Issuance", href: "/stock-issuance", icon: PackageMinus },
-  { name: "Custodians", href: "/custodians", icon: Users },
-  { name: "Stock Card", href: "/stock-card", icon: FileText },
-  { name: "Physical Count", href: "/physical-count", icon: ClipboardCheck },
-  { name: "Department Requests", href: "/department-requests", icon: FileText },
-  { name: "User Roles", href: "/user-roles", icon: Users },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, permission: PERMISSIONS.DASHBOARD },
+  { name: "Items Management", href: "/items", icon: Package, permission: PERMISSIONS.ITEMS_MANAGEMENT },
+  { name: "Stock Receiving", href: "/stock-receiving", icon: PackagePlus, permission: PERMISSIONS.STOCK_RECEIVING },
+  { name: "Stock Issuance", href: "/stock-issuance", icon: PackageMinus, permission: PERMISSIONS.STOCK_ISSUANCE },
+  { name: "Custodians", href: "/custodians", icon: Users, permission: PERMISSIONS.CUSTODIANS },
+  { name: "Stock Card", href: "/stock-card", icon: FileText, permission: PERMISSIONS.STOCK_CARD },
+  { name: "Physical Count", href: "/physical-count", icon: ClipboardCheck, permission: PERMISSIONS.PHYSICAL_COUNT },
+  { name: "Department Requests", href: "/department-requests", icon: FileText, permission: PERMISSIONS.DEPT_REQUESTS },
+  { name: "User Roles", href: "/user-roles", icon: Users, permission: PERMISSIONS.USER_ROLES },
+  { name: "Settings", href: "/settings", icon: Settings, permission: PERMISSIONS.SETTINGS },
 ];
 
 export function AppLayout() {
@@ -42,8 +45,13 @@ export function AppLayout() {
     navigate("/auth");
   };
 
-  // For now, show all navigation - role system can be added later to Directus
-  const visibleNavigation = navigation;
+  const userRoleId = user?.role?.id;
+
+  const visibleNavigation = userRoleId === SUPER_ADMIN_ROLE_ID || userRoleId === ROLES.ADMIN
+  ? navigation
+  : navigation.filter(item => 
+      userRoleId && rolePermissions[userRoleId]?.includes(item.permission)
+    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,7 +116,10 @@ export function AppLayout() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {user?.full_name || "User"}
+                  {user?.full_name || "Guest"}
+                </p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">
+                  {user?.role?.name || "No Role"}
                 </p>
                 <p className="text-xs text-sidebar-foreground/60 truncate">
                   {user?.email}

@@ -20,7 +20,7 @@ export function useUserRole() {
     }
     // The user's role is nested in the 'role' object.
     // We access it via user.role.name
-    return (user?.role?.name as UserRole) || null;
+    return (user?.role?.name as UserRole) || "viewer";                                                                                                                            
   }, [user, isSuperAdmin]);
 
   const isLoading = authLoading; // Inherit loading state from useAuth
