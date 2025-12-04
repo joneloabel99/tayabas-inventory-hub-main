@@ -34,6 +34,11 @@ export default function Settings() {
     last_name: "",
     department: "",
   });
+  const [initialProfileForm, setInitialProfileForm] = useState({
+    first_name: "",
+    last_name: "",
+    department: "",
+  });
 
   const [passwordForm, setPasswordForm] = useState({
     newPassword: "",
@@ -45,13 +50,20 @@ export default function Settings() {
 
   useEffect(() => {
     if (profile) {
-      setProfileForm({
+      const initialData = {
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
         department: profile.department || "",
-      });
+      };
+      setProfileForm(initialData);
+      setInitialProfileForm(initialData);
     }
   }, [profile]);
+
+  const isProfileChanged =
+    profileForm.first_name !== initialProfileForm.first_name ||
+    profileForm.last_name !== initialProfileForm.last_name ||
+    profileForm.department !== initialProfileForm.department;
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,15 +72,12 @@ export default function Settings() {
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       return;
     }
-
     if (passwordForm.newPassword.length < 6) {
       return;
     }
-
     await updatePassword.mutateAsync(passwordForm.newPassword);
     setPasswordForm({ newPassword: "", confirmPassword: "" });
   };
@@ -165,7 +174,7 @@ export default function Settings() {
 
                 <Button
                   type="submit"
-                  disabled={updateProfile.isPending}
+                  disabled={updateProfile.isPending || !isProfileChanged}
                   className="gap-2"
                 >
                   <Save className="w-4 h-4" />
