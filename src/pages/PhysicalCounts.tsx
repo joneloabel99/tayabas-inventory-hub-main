@@ -47,7 +47,7 @@ export default function PhysicalCounts() {
     setFormData({
       countDate: "",
       countedBy: "",
-      location: "",
+      location: "GSO Storage",
       notes: "",
     });
   };
