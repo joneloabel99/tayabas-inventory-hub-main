@@ -3,10 +3,13 @@ import { FileText, Search, Download, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useItems } from "@/hooks/useItems";
 import { useStockMovements } from "@/hooks/useStockMovements";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface StockCardEntry {
   id: string;
@@ -88,7 +91,8 @@ export default function StockCardNew() {
                   ? `Received on: ${format(new Date(movement.date), 'yyyy-MM-dd')}`
                   : movement.custodian
                     ? `Issued to: ${movement.custodian.name}`
-                    : '',      });
+                    : '',
+      });
     });
 
     return entries;
@@ -129,6 +133,113 @@ export default function StockCardNew() {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleExportPdf = () => {
+    if (!selectedItemData || stockCardEntries.length === 0) return;
+
+    const doc = new jsPDF();
+    const pageHeight = doc.internal.pageSize.height;
+
+    // A. Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("Tayabas City General Services Office", doc.internal.pageSize.getWidth() / 2, 20, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.text("Stock Card Report", doc.internal.pageSize.getWidth() / 2, 28, { align: "center" });
+
+    // B. Item Details (using doc.text instead of autoTable for tighter control)
+    let currentY = 38;
+    const textMargin = 14;
+    const lineHeight = 7; // Adjust as needed for spacing
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(`Item Code:`, textMargin, currentY);
+    doc.setFont("helvetica", "normal");
+    doc.text(selectedItemData.itemCode, textMargin + doc.getTextWidth(`Item Code:  `), currentY);
+    currentY += lineHeight;
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Item Name:`, textMargin, currentY);
+    doc.setFont("helvetica", "normal");
+    doc.text(selectedItemData.itemName, textMargin + doc.getTextWidth(`Item Name:  `), currentY);
+    currentY += lineHeight;
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Unit:`, textMargin, currentY);
+    doc.setFont("helvetica", "normal");
+    doc.text(selectedItemData.unit, textMargin + doc.getTextWidth(`Unit:  `), currentY);
+    currentY += lineHeight;
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Location:`, textMargin, currentY);
+    doc.setFont("helvetica", "normal");
+    doc.text(selectedItemData.location || 'N/A', textMargin + doc.getTextWidth(`Location:  `), currentY);
+    currentY += lineHeight + 5; // Add a bit more space before the main table
+
+    const tableStartY = currentY; // Update table start Y
+
+    // C. Main Movements Table
+    const tableColumns = ["Date", "Reference", "Type", "Qty", "Balance", "Unit Cost", "Total Value", "Remarks"]; // Removed "Status"
+    const tableRows = stockCardEntries.map(entry => ([
+      entry.date,
+      entry.reference,
+      entry.type.charAt(0).toUpperCase() + entry.type.slice(1), // Full word: Received or Issued
+      { content: (entry.type === 'received' ? '+' : '-') + entry.quantity, styles: { halign: 'right' } },
+      { content: entry.balance, styles: { halign: 'right' } }, // Removed fontStyle: 'bold'
+      { content: entry.unitCost.toFixed(2), styles: { halign: 'right' } }, // Removed '₱'
+      { content: entry.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), styles: { halign: 'right' } }, // Removed '₱'
+      entry.remarks
+    ]));
+
+    autoTable(doc, {
+      startY: tableStartY,
+      head: [tableColumns],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { 
+          fillColor: '#495057', // Darker grey
+          textColor: 255, 
+          fontStyle: 'bold',
+          halign: 'center'
+      },
+      styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          valign: 'middle'
+      },
+      alternateRowStyles: { fillColor: '#f8f9fa' }, // Light grey for stripes
+      columnStyles: {
+        2: { minCellWidth: 15 }, // Type (now at index 2)
+        3: { halign: 'right', minCellWidth: 15 }, // Qty (now at index 3)
+        4: { halign: 'right', minCellWidth: 18 }, // Balance (now at index 4)
+        5: { halign: 'right', minCellWidth: 22 }, // Unit Cost (now at index 5)
+        6: { halign: 'right', minCellWidth: 28 }, // Total Value (now at index 6)
+      },
+      didDrawPage: (data) => {
+          // D. Footer
+          doc.setFontSize(8);
+          doc.setTextColor(100);
+          const pageNumberText = `Page ${data.pageNumber}`;
+          doc.text(pageNumberText, doc.internal.pageSize.getWidth() / 2, pageHeight - 7, { align: "center" });
+          doc.text(`Generated on: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`, 14, pageHeight - 7);
+          doc.text(`Tayabas Inventory Hub`, doc.internal.pageSize.getWidth() - 14, pageHeight - 7, { align: 'right'});
+      }
+    });
+
+    // Add total page count to footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text(`of ${pageCount}`, doc.internal.pageSize.getWidth() / 2 + 10, pageHeight - 7);
+    }
+
+    // E. Save PDF
+    doc.save(`stock-card-${selectedItemData.itemCode}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
+
   if (itemsLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -145,10 +256,12 @@ export default function StockCardNew() {
           <p className="text-muted-foreground mt-1">View detailed stock movement history by item</p>
         </div>
         {selectedItem && stockCardEntries.length > 0 && (
-          <Button onClick={handleExport} className="gap-2">
-            <Download className="w-4 h-4" />
-            Export to CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleExportPdf} className="gap-2">
+              <Download className="w-4 h-4" />
+              Export to PDF
+            </Button>
+          </div>
         )}
       </div>
 

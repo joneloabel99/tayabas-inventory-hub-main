@@ -20,7 +20,7 @@ export default function PhysicalCounts() {
   const [formData, setFormData] = useState({
     countDate: "",
     countedBy: "",
-    location: "",
+    location: "GSO Storage",
     notes: "",
   });
 
@@ -163,17 +163,14 @@ export default function PhysicalCounts() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
-              <Select value={formData.location} onValueChange={(value) => setFormData({ ...formData, location: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Warehouse A">Warehouse A</SelectItem>
-                  <SelectItem value="IT Storage">IT Storage</SelectItem>
-                  <SelectItem value="Medical Storage">Medical Storage</SelectItem>
-                  <SelectItem value="Main Office">Main Office</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={() => {}} // Disabled, so no change handler needed
+                readOnly // Make it read-only
+                disabled // Visually disable it
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="countedBy">Counter / Assigned To</Label>

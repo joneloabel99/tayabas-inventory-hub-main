@@ -28,7 +28,7 @@ export default function Items() {
     quantity: "",
     unitCost: "",
     reorderLevel: "",
-    location: "",
+    location: "GSO Storage",
   });
 
   useEffect(() => {
@@ -329,8 +329,9 @@ export default function Items() {
                 <Input
                   id="location"
                   value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="Warehouse A"
+                  onChange={() => {}} // Disabled, so no change handler needed
+                  readOnly // Make it read-only
+                  disabled // Visually disable it
                 />
               </div>
             </div>

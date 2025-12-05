@@ -1,7 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Package, TrendingUp, AlertTriangle, PackagePlus, PackageMinus, Users, FileText, CheckCircle } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
+import { DetailsDialog } from "@/components/dashboard/DetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from "@/components/ui/table";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -11,6 +15,13 @@ import { useStockMovements } from "@/hooks/useStockMovements";
 import { useCustodians } from "@/hooks/useCustodians";
 import { useDepartmentRequests } from "@/hooks/useDepartmentRequests";
 import { usePhysicalCounts } from "@/hooks/usePhysicalCounts";
+import { Item, Custodian, DepartmentRequest, PhysicalCount, StockMovement } from "@/types";
+
+type DialogDataType = {
+  title: string;
+  description?: string;
+  content: React.ReactNode;
+}
 
 const formatCurrencyValue = (value: number) => {
   if (value === 0) return "₱0";
@@ -33,21 +44,94 @@ export default function Dashboard() {
   const { requests, isLoading: requestsLoading } = useDepartmentRequests();
   const { counts: physicalCounts, isLoading: countsLoading } = usePhysicalCounts();
 
+  const [dialogData, setDialogData] = useState<DialogDataType | null>(null);
+
   const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
   const totalValue = useMemo(() => items.reduce((sum, item) => sum + (item.quantity * item.unitCost), 0), [items]);
-  const lowStockCount = useMemo(() => items.filter(item => item.quantity <= item.reorderLevel).length, [items]);
+  const lowStockItems = useMemo(() => items.filter(item => item.quantity <= item.reorderLevel), [items]);
+  const lowStockCount = lowStockItems.length;
+
+  const today = new Date().toDateString();
+  const issuedTodayMovements = useMemo(() => movements.filter(m => m.type === 'issued' && new Date(m.date).toDateString() === today), [movements, today]);
+  const receivedTodayMovements = useMemo(() => movements.filter(m => m.type === 'received' && new Date(m.date).toDateString() === today), [movements, today]);
+  const pendingRisRequests = useMemo(() => requests.filter(r => r.status === 'pending'), [requests]);
+  
+  const now = new Date();
+  const completedCountsThisMonth = useMemo(() => physicalCounts.filter(c => c.status === 'Completed' && new Date(c.countDate).getMonth() === now.getMonth() && new Date(c.countDate).getFullYear() === now.getFullYear()), [physicalCounts, now]);
 
   const dashboardStats = useMemo(() => {
-    const today = new Date().toDateString();
-    const issuedToday = movements.filter(m => m.type === 'issued' && new Date(m.date).toDateString() === today).reduce((sum, m) => sum + m.quantity, 0);
-    const receivedToday = movements.filter(m => m.type === 'received' && new Date(m.date).toDateString() === today).reduce((sum, m) => sum + m.quantity, 0);
-    const pendingRis = requests.filter(r => r.status === 'pending').length;
+    const issuedToday = issuedTodayMovements.reduce((sum, m) => sum + m.quantity, 0);
+    const receivedToday = receivedTodayMovements.reduce((sum, m) => sum + m.quantity, 0);
+    const pendingRis = pendingRisRequests.length;
     const activeCustodians = custodians.length;
-    const now = new Date();
-    const completedCountsThisMonth = physicalCounts.filter(c => c.status === 'Completed' && new Date(c.countDate).getMonth() === now.getMonth() && new Date(c.countDate).getFullYear() === now.getFullYear()).length;
-
-    return { issuedToday, receivedToday, pendingRis, activeCustodians, completedCountsThisMonth };
-  }, [movements, custodians, requests, physicalCounts]);
+    
+    return { issuedToday, receivedToday, pendingRis, activeCustodians, completedCountsThisMonth: completedCountsThisMonth.length };
+  }, [issuedTodayMovements, receivedTodayMovements, pendingRisRequests, custodians, completedCountsThisMonth]);
+  
+  const handleCardClick = (cardTitle: string) => {
+    let data: DialogDataType | null = null;
+    switch(cardTitle) {
+      case 'Total Items':
+        data = {
+          title: "All Items",
+          description: "A complete list of all items in the inventory.",
+          content: <ItemsTable items={items} />
+        };
+        break;
+      case 'Total Stock Value':
+        data = {
+          title: "Stock Value Breakdown",
+          description: "The value of each item in the inventory.",
+          content: <StockValueTable items={items} />
+        };
+        break;
+      case 'Low Stock Alerts':
+        data = {
+          title: "Low Stock Items",
+          description: "Items that have fallen below their reorder level.",
+          content: <LowStockTable items={lowStockItems} />
+        };
+        break;
+      case 'Active Custodians':
+        data = {
+          title: "Active Custodians",
+          description: "List of all active custodians.",
+          content: <CustodiansTable custodians={custodians} />
+        };
+        break;
+      case 'Items Issued Today':
+        data = {
+          title: "Items Issued Today",
+          description: `All items issued on ${today}.`,
+          content: <MovementsTable movements={issuedTodayMovements} />
+        };
+        break;
+      case 'Items Received Today':
+        data = {
+          title: "Items Received Today",
+          description: `All items received on ${today}.`,
+          content: <MovementsTable movements={receivedTodayMovements} />
+        };
+        break;
+      case 'Pending RIS':
+        data = {
+          title: "Pending Requisition and Issue Slips",
+          description: "RIS awaiting approval.",
+          content: <RequestsTable requests={pendingRisRequests} />
+        };
+        break;
+      case 'Physical Counts':
+        data = {
+          title: "Physical Counts (This Month)",
+          description: `Physical counts completed in ${now.toLocaleString('default', { month: 'long' })}.`,
+          content: <PhysicalCountsTable counts={completedCountsThisMonth} />
+        };
+        break;
+    }
+    if (data) {
+      setDialogData(data);
+    }
+  };
 
   const monthlyStockData = useMemo(() => {
     const monthMap: { [key: string]: { received: number, issued: number } } = {};
@@ -109,7 +193,7 @@ export default function Dashboard() {
     return Object.entries(departmentMap).map(([name, value], index) => ({ name, value, fill: COLORS[index % COLORS.length] }));
   }, [movements]);
 
-  const lowStockItems = items
+  const sortedLowStockItems = items
     .filter(item => item.quantity <= item.reorderLevel)
     .sort((a, b) => (a.quantity / a.reorderLevel) - (b.quantity / b.reorderLevel));
 
@@ -123,19 +207,30 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Items" value={totalItems.toLocaleString()} subtitle="Across all categories" icon={Package} variant="default" />
-        <StatsCard title="Total Stock Value" value={formatCurrencyValue(totalValue)} subtitle="Current inventory worth" icon={TrendingUp} variant="success" />
-        <StatsCard title="Low Stock Alerts" value={lowStockCount} subtitle="Items need reordering" icon={AlertTriangle} variant="warning" />
-        <StatsCard title="Active Custodians" value={dashboardStats.activeCustodians} subtitle="Asset holders" icon={Users} variant="default" />
+        <StatsCard title="Total Items" value={totalItems.toLocaleString()} subtitle="Across all categories" icon={Package} variant="default" onClick={() => handleCardClick('Total Items')} />
+        <StatsCard title="Total Stock Value" value={formatCurrencyValue(totalValue)} subtitle="Current inventory worth" icon={TrendingUp} variant="success" onClick={() => handleCardClick('Total Stock Value')} />
+        <StatsCard title="Low Stock Alerts" value={lowStockCount} subtitle="Items need reordering" icon={AlertTriangle} variant="warning" onClick={() => handleCardClick('Low Stock Alerts')} />
+        <StatsCard title="Active Custodians" value={dashboardStats.activeCustodians} subtitle="Asset holders" icon={Users} variant="default" onClick={() => handleCardClick('Active Custodians')} />
       </div>
 
       {/* Second Stats Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Items Issued Today" value={dashboardStats.issuedToday} subtitle="RIS processed" icon={PackageMinus} variant="default" />
-        <StatsCard title="Items Received Today" value={dashboardStats.receivedToday} subtitle="Stock added" icon={PackagePlus} variant="success" />
-        <StatsCard title="Pending RIS" value={dashboardStats.pendingRis} subtitle="Awaiting approval" icon={FileText} variant="warning" />
-        <StatsCard title="Physical Counts" value={dashboardStats.completedCountsThisMonth} subtitle="Completed this month" icon={CheckCircle} variant="success" />
+        <StatsCard title="Items Issued Today" value={dashboardStats.issuedToday} subtitle="RIS processed" icon={PackageMinus} variant="default" onClick={() => handleCardClick('Items Issued Today')} />
+        <StatsCard title="Items Received Today" value={dashboardStats.receivedToday} subtitle="Stock added" icon={PackagePlus} variant="success" onClick={() => handleCardClick('Items Received Today')} />
+        <StatsCard title="Pending RIS" value={dashboardStats.pendingRis} subtitle="Awaiting approval" icon={FileText} variant="warning" onClick={() => handleCardClick('Pending RIS')} />
+        <StatsCard title="Physical Counts" value={dashboardStats.completedCountsThisMonth} subtitle="Completed this month" icon={CheckCircle} variant="success" onClick={() => handleCardClick('Physical Counts')} />
       </div>
+
+      {dialogData && (
+        <DetailsDialog
+          open={!!dialogData}
+          onOpenChange={(open) => !open && setDialogData(null)}
+          title={dialogData.title}
+          description={dialogData.description}
+        >
+          {dialogData.content}
+        </DetailsDialog>
+      )}
 
       {/* Charts Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -238,7 +333,7 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {lowStockItems.map((item) => (
+                {sortedLowStockItems.map((item) => (
                   <tr key={item.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                     <td className="py-3 px-4 text-sm font-medium">{item.itemCode}</td>
                     <td className="py-3 px-4 text-sm">{item.itemName}</td>
@@ -262,3 +357,162 @@ export default function Dashboard() {
     </div>
   );
 }
+
+// Dialog Content Components
+
+const ItemsTable = ({ items }: { items: Item[] }) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Code</TableHead>
+        <TableHead>Name</TableHead>
+        <TableHead>Category</TableHead>
+        <TableHead className="text-right">Quantity</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {items.map(item => (
+        <TableRow key={item.id}>
+          <TableCell>{item.itemCode}</TableCell>
+          <TableCell>{item.itemName}</TableCell>
+          <TableCell>{item.category}</TableCell>
+          <TableCell className="text-right">{item.quantity}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);
+
+const StockValueTable = ({ items }: { items: Item[] }) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Code</TableHead>
+        <TableHead>Name</TableHead>
+        <TableHead className="text-right">Quantity</TableHead>
+        <TableHead className="text-right">Unit Cost</TableHead>
+        <TableHead className="text-right">Total Value</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {items.map(item => (
+        <TableRow key={item.id}>
+          <TableCell>{item.itemCode}</TableCell>
+          <TableCell>{item.itemName}</TableCell>
+          <TableCell className="text-right">{item.quantity}</TableCell>
+          <TableCell className="text-right">{formatCurrencyValue(item.unitCost)}</TableCell>
+          <TableCell className="text-right font-medium">{formatCurrencyValue(item.quantity * item.unitCost)}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);
+
+const LowStockTable = ({ items }: { items: Item[] }) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Code</TableHead>
+        <TableHead>Name</TableHead>
+        <TableHead className="text-right">Quantity</TableHead>
+        <TableHead className="text-right">Reorder Level</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {items.map(item => (
+        <TableRow key={item.id}>
+          <TableCell>{item.itemCode}</TableCell>
+          <TableCell>{item.itemName}</TableCell>
+          <TableCell className="text-right text-destructive font-bold">{item.quantity}</TableCell>
+          <TableCell className="text-right">{item.reorderLevel}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);
+
+const CustodiansTable = ({ custodians }: { custodians: Custodian[] }) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Name</TableHead>
+        <TableHead>Department</TableHead>
+        <TableHead>Contact</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {custodians.map(c => (
+        <TableRow key={c.id}>
+          <TableCell>{c.name}</TableCell>
+          <TableCell>{c.department}</TableCell>
+          <TableCell>{c.contactNumber}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);
+
+const MovementsTable = ({ movements }: { movements: StockMovement[] }) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Item</TableHead>
+        <TableHead className="text-right">Quantity</TableHead>
+        <TableHead>Date</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {movements.map(m => (
+        <TableRow key={m.id}>
+          <TableCell>{(m.item as any)?.itemName || 'N/A'}</TableCell>
+          <TableCell className="text-right">{m.quantity}</TableCell>
+          <TableCell>{new Date(m.date).toLocaleDateString()}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);
+
+const RequestsTable = ({ requests }: { requests: DepartmentRequest[] }) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>RIS No.</TableHead>
+        <TableHead>Department</TableHead>
+        <TableHead>Status</TableHead>
+        <TableHead>Date</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {requests.map(r => (
+        <TableRow key={r.id}>
+          <TableCell>{r.risNumber}</TableCell>
+          <TableCell>{r.department}</TableCell>
+          <TableCell>{r.status}</TableCell>
+          <TableCell>{new Date(r.requestDate).toLocaleDateString()}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);
+
+const PhysicalCountsTable = ({ counts }: { counts: PhysicalCount[] }) => (
+  <Table>
+    <TableHeader>
+      <TableRow>
+        <TableHead>Count Date</TableHead>
+        <TableHead>Status</TableHead>
+        <TableHead>Location</TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {counts.map(c => (
+        <TableRow key={c.id}>
+          <TableCell>{new Date(c.countDate).toLocaleDateString()}</TableCell>
+          <TableCell>{c.status}</TableCell>
+          <TableCell>{c.location}</TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);

@@ -12,9 +12,10 @@ interface StatsCardProps {
     isPositive: boolean;
   };
   variant?: "default" | "success" | "warning" | "danger";
+  onClick?: () => void;
 }
 
-export function StatsCard({ title, value, subtitle, icon: Icon, trend, variant = "default" }: StatsCardProps) {
+export function StatsCard({ title, value, subtitle, icon: Icon, trend, variant = "default", onClick }: StatsCardProps) {
   const variantStyles = {
     default: "bg-primary/10 text-primary",
     success: "bg-success/10 text-success",
@@ -23,7 +24,13 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, variant =
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-300">
+    <Card 
+      onClick={onClick} 
+      className={cn(
+        "hover:shadow-lg transition-shadow duration-300",
+        onClick && "cursor-pointer hover:bg-muted/50"
+      )}
+    >
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">

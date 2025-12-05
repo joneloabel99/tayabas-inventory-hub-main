@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useItems } from "@/hooks/useItems";
 import { useStockMovements } from "@/hooks/useStockMovements";
+import { DepartmentCombobox } from "@/components/ui/DepartmentCombobox";
 
 export default function Custodians() {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ export default function Custodians() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Total Value</p>
-                          <p className="text-lg font-semibold text-foreground">₱{(custodian.totalValue / 1000).toFixed(0)}K</p>
+                          <p className="text-lg font-semibold text-foreground">₱{custodian.totalValue.toLocaleString()}</p>
                         </div>
                       </div>
                     </div>
@@ -158,11 +159,9 @@ export default function Custodians() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="department">Department</Label>
-              <Input
-                id="department"
+              <DepartmentCombobox
                 value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                placeholder="Department Name"
+                onChange={(value) => setFormData({ ...formData, department: value })}
               />
             </div>
             <div className="space-y-2">
