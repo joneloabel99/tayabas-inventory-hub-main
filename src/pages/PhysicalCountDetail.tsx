@@ -124,7 +124,12 @@ export default function PhysicalCountDetail() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Physical Count Details</h1>
           <p className="text-muted-foreground mt-1">
-            {count.location} - {count.countDate}
+            Status: {count.status} | {count.location} - {count.countDate}
+            {count.status === 'Completed' && (
+              <>
+                {' '} | Items Counted: {count.itemsCounted ?? 0} | Discrepancies Found: {count.discrepanciesFound ?? 0}
+              </>
+            )}
           </p>
         </div>
       </div>

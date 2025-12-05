@@ -11,7 +11,7 @@ export function usePhysicalCount(id: string | undefined) {
     queryFn: async () => {
       if (!id) return null;
       try {
-        const response = await directusService.getItem<PhysicalCount>("physical_counts", id);
+        const response = await directusService.getItem<PhysicalCount>("physical_counts", id, { fields: '*,items.*' });
         return response.data;
       } catch (error) {
         console.error("Failed to fetch physical count:", error);

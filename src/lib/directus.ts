@@ -197,8 +197,9 @@ class DirectusServiceClient extends BaseDirectusClient {
     return this.request<DirectusListResponse<T>>(`/items/${collection}${queryString}`);
   }
     
-  async getItem<T>(collection: string, id: string): Promise<DirectusResponse<T>> {
-    return this.request<DirectusResponse<T>>(`/items/${collection}/${id}`);
+  async getItem<T>(collection: string, id: string, params?: Record<string, any>): Promise<DirectusResponse<T>> {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return this.request<DirectusResponse<T>>(`/items/${collection}/${id}${queryString}`);
   }
   async getAllUsers<T>(params?: Record<string, any>): Promise<DirectusListResponse<T>> {
     const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';

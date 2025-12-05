@@ -16,7 +16,6 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import DepartmentRequests from "./pages/DepartmentRequests";
 import PhysicalCounts from "./pages/PhysicalCounts";
 import UserRoles from "./pages/UserRoles";
-import StockCard from "./pages/StockCard";
 import StockCardNew from "./pages/StockCardNew";
 import PhysicalCountDetail from "./pages/PhysicalCountDetail";
 import { RoleGuard } from "./components/RoleGuard";
