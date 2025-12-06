@@ -7,7 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from "@/components/ui/dialog";
+
+interface PhysicalCountItem {
+  item_id: string;
+  counted_quantity: number;
+  system_quantity: number;
+  discrepancy: number;
+  id?: string;
+}
 
 export default function PhysicalCountDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,7 +29,7 @@ export default function PhysicalCountDetail() {
 
   useEffect(() => {
     if (count?.items) {
-      const initialCounts = count.items.reduce((acc: Record<string, string>, item: any) => {
+      const initialCounts = count.items.reduce((acc: Record<string, string>, item: PhysicalCountItem) => {
         acc[item.item_id] = String(item.counted_quantity);
         return acc;
       }, {});
@@ -75,7 +85,7 @@ export default function PhysicalCountDetail() {
           data: { quantity: countedQuantity },
         });
       }
-      return {
+      const pciPayload: Partial<PhysicalCountItem> = {
         item_id: item.id,
         counted_quantity: countedQuantity,
         system_quantity: item.quantity,
@@ -104,6 +114,86 @@ export default function PhysicalCountDetail() {
     setIsFinalizeDialogOpen(false);
   };
 
+  const handleDownloadPdf = async () => {
+    if (!count) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Add logo
+    const response = await fetch('/LGU-logo-big.png');
+    const blob = await response.blob();
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => {
+      const base64data = reader.result;
+      doc.addImage(base64data as string, 'PNG', pageWidth / 2 - 15, 10, 30, 30); // Centered logo, higher up
+
+      // Add header
+      const header = () => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(20);
+        doc.text('Physical Count Report', pageWidth / 2, 50, { align: 'center' }); // Adjusted Y position
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, pageWidth / 2, 56, { align: 'center' }); // Adjusted Y position
+      };
+
+      // Add footer
+      const footer = () => {
+        const pageCount = doc.getNumberOfPages();
+        doc.setFontSize(10);
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+        }
+      };
+
+      header();
+
+      // Document details
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Count Details', 14, 65); // Adjusted Y position
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Status: ${count.status}`, 14, 73); // Adjusted Y position
+      doc.text(`Location: ${count.location}`, 14, 79); // Adjusted Y position
+      doc.text(`Date: ${count.countDate}`, 14, 85); // Adjusted Y position
+
+      if (count.status === 'Completed') {
+        doc.text(`Items Counted: ${count.itemsCounted ?? 0}`, 14, 91); // Adjusted Y position
+        doc.text(`Discrepancies Found: ${count.discrepanciesFound ?? 0}`, 14, 97); // Adjusted Y position
+      }
+
+      const tableData = items.map(item => {
+        const systemQuantity = item.quantity;
+        const countedQuantityStr = countedQuantities[item.id];
+        const countedQuantity = countedQuantityStr !== undefined && countedQuantityStr !== '' ? parseInt(countedQuantityStr, 10) : undefined;
+        const discrepancy = countedQuantity !== undefined ? countedQuantity - systemQuantity : 0;
+        return [
+          item.itemName,
+          systemQuantity,
+          countedQuantity === undefined ? '-' : countedQuantity,
+          countedQuantity === undefined ? '-' : discrepancy,
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 105, // Adjusted startY
+        head: [['Item', 'System Quantity', 'Counted Quantity', 'Discrepancy']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [22, 160, 133] },
+        styles: { font: 'helvetica', fontSize: 10 },
+        didDrawPage: () => {
+          footer();
+        }
+      });
+
+      doc.save(`physical-count-${count.id}.pdf`);
+    };
+  };
+
 
   if (isLoadingCount || isLoadingItems) {
     return <div>Loading...</div>;
@@ -117,21 +207,24 @@ export default function PhysicalCountDetail() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => navigate('/physical-count')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Physical Count Details</h1>
-          <p className="text-muted-foreground mt-1">
-            Status: {count.status} | {count.location} - {count.countDate}
-            {count.status === 'Completed' && (
-              <>
-                {' '} | Items Counted: {count.itemsCounted ?? 0} | Discrepancies Found: {count.discrepanciesFound ?? 0}
-              </>
-            )}
-          </p>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate('/physical-count')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Physical Count Details</h1>
+            <p className="text-muted-foreground mt-1">
+              Status: {count.status} | {count.location} - {count.countDate}
+              {count.status === 'Completed' && (
+                <>
+                  {' '} | Items Counted: {count.itemsCounted ?? 0} | Discrepancies Found: {count.discrepanciesFound ?? 0}
+                </>
+              )}
+            </p>
+          </div>
         </div>
+        <Button variant="outline" onClick={handleDownloadPdf}>Download PDF</Button>
       </div>
 
       <Card>
