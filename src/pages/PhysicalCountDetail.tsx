@@ -158,7 +158,7 @@ export default function PhysicalCountDetail() {
       doc.setFont('helvetica', 'normal');
       doc.text(`Status: ${count.status}`, 14, 73); // Adjusted Y position
       doc.text(`Location: ${count.location}`, 14, 79); // Adjusted Y position
-      doc.text(`Date: ${count.countDate}`, 14, 85); // Adjusted Y position
+      doc.text(`Date: ${new Date(count.countDate).toLocaleDateString()}`, 14, 85); // Formatted date
 
       if (count.status === 'Completed') {
         doc.text(`Items Counted: ${count.itemsCounted ?? 0}`, 14, 91); // Adjusted Y position
@@ -224,7 +224,7 @@ export default function PhysicalCountDetail() {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={handleDownloadPdf}>Download PDF</Button>
+        <Button variant="default" onClick={handleDownloadPdf}>Download PDF</Button>
       </div>
 
       <Card>
