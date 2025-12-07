@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import { rolePermissions, ROLES } from "@/config/rolePermissions"; // Import ROLES

@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { AppLayout } from "./components/layout/AppLayout";
-import Auth from "./pages/Auth";
+import { MainLayout } from "./components/layout/MainLayout";
+import AuthLayout from "./components/layout/AuthLayout";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Items from "./pages/Items";
 import StockReceiving from "./pages/StockReceiving";
@@ -29,29 +30,28 @@ function App() {
       <TooltipProvider>
         <Router>
           <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<RoleGuard permission={PERMISSIONS.DASHBOARD}><Dashboard /></RoleGuard>} />
-              <Route path="items" element={<RoleGuard permission={PERMISSIONS.ITEMS_MANAGEMENT}><Items /></RoleGuard>} />
-              <Route path="stock-receiving" element={<RoleGuard permission={PERMISSIONS.STOCK_RECEIVING}><StockReceiving /></RoleGuard>} />
-              <Route path="stock-issuance" element={<RoleGuard permission={PERMISSIONS.STOCK_ISSUANCE}><StockIssuance /></RoleGuard>} />
-              <Route path="custodians" element={<RoleGuard permission={PERMISSIONS.CUSTODIANS}><Custodians /></RoleGuard>} />
-              <Route path="custodians/:id" element={<RoleGuard permission={PERMISSIONS.CUSTODIANS}><CustodianDetail /></RoleGuard>} />
-              <Route path="department-requests" element={<RoleGuard permission={PERMISSIONS.DEPT_REQUESTS}><DepartmentRequests /></RoleGuard>} />
-              <Route path="physical-count" element={<RoleGuard permission={PERMISSIONS.PHYSICAL_COUNT}><PhysicalCounts /></RoleGuard>} />
-              <Route path="physical-count/:id" element={<RoleGuard permission={PERMISSIONS.PHYSICAL_COUNT}><PhysicalCountDetail /></RoleGuard>} />
-              <Route path="stock-card" element={<RoleGuard permission={PERMISSIONS.STOCK_CARD}><StockCardNew /></RoleGuard>} />
-              <Route path="settings" element={<RoleGuard permission={PERMISSIONS.SETTINGS}><Settings /></RoleGuard>} />
-              <Route path="user-roles" element={<RoleGuard permission={PERMISSIONS.USER_ROLES}><UserRoles /></RoleGuard>} />
-              <Route path="*" element={<NotFound />} />
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<Login />} />
             </Route>
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<MainLayout />}>
+                <Route index element={<RoleGuard permission={PERMISSIONS.DASHBOARD}><Dashboard /></RoleGuard>} />
+                <Route path="items" element={<RoleGuard permission={PERMISSIONS.ITEMS_MANAGEMENT}><Items /></RoleGuard>} />
+                <Route path="stock-receiving" element={<RoleGuard permission={PERMISSIONS.STOCK_RECEIVING}><StockReceiving /></RoleGuard>} />
+                <Route path="stock-issuance" element={<RoleGuard permission={PERMISSIONS.STOCK_ISSUANCE}><StockIssuance /></RoleGuard>} />
+                <Route path="custodians" element={<RoleGuard permission={PERMISSIONS.CUSTODIANS}><Custodians /></RoleGuard>} />
+                <Route path="custodians/:id" element={<RoleGuard permission={PERMISSIONS.CUSTODIANS}><CustodianDetail /></RoleGuard>} />
+                <Route path="department-requests" element={<RoleGuard permission={PERMISSIONS.DEPT_REQUESTS}><DepartmentRequests /></RoleGuard>} />
+                <Route path="physical-count" element={<RoleGuard permission={PERMISSIONS.PHYSICAL_COUNT}><PhysicalCounts /></RoleGuard>} />
+                <Route path="physical-count/:id" element={<RoleGuard permission={PERMISSIONS.PHYSICAL_COUNT}><PhysicalCountDetail /></RoleGuard>} />
+                <Route path="stock-card" element={<RoleGuard permission={PERMISSIONS.STOCK_CARD}><StockCardNew /></RoleGuard>} />
+                <Route path="settings" element={<RoleGuard permission={PERMISSIONS.SETTINGS}><Settings /></RoleGuard>} />
+                <Route path="user-roles" element={<RoleGuard permission={PERMISSIONS.USER_ROLES}><UserRoles /></RoleGuard>} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
         <Toaster />

@@ -1,55 +1,32 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Package, 
-  PackagePlus, 
-  PackageMinus, 
-  Users, 
-  FileText, 
-  ClipboardCheck,
-  Settings,
-  Menu,
-  X,
-  LogOut
-} from "lucide-react";
+import { Menu, X, LogOut, Package } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { navigationLinks } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { PERMISSIONS, rolePermissions, ROLES } from "@/config/rolePermissions";
 
 const SUPER_ADMIN_ROLE_ID = "fff05402-13a6-43a4-b961-7d20a307a02e";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard, permission: PERMISSIONS.DASHBOARD },
-  { name: "Items Management", href: "/items", icon: Package, permission: PERMISSIONS.ITEMS_MANAGEMENT },
-  { name: "Stock Receiving", href: "/stock-receiving", icon: PackagePlus, permission: PERMISSIONS.STOCK_RECEIVING },
-  { name: "Stock Issuance", href: "/stock-issuance", icon: PackageMinus, permission: PERMISSIONS.STOCK_ISSUANCE },
-  { name: "Custodians", href: "/custodians", icon: Users, permission: PERMISSIONS.CUSTODIANS },
-  { name: "Stock Card", href: "/stock-card", icon: FileText, permission: PERMISSIONS.STOCK_CARD },
-  { name: "Physical Count", href: "/physical-count", icon: ClipboardCheck, permission: PERMISSIONS.PHYSICAL_COUNT },
-  { name: "Department Requests", href: "/department-requests", icon: FileText, permission: PERMISSIONS.DEPT_REQUESTS },
-  { name: "User Roles", href: "/user-roles", icon: Users, permission: PERMISSIONS.USER_ROLES },
-  { name: "Settings", href: "/settings", icon: Settings, permission: PERMISSIONS.SETTINGS },
-];
 
-export function AppLayout() {
+export function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/auth");
+    navigate("/login");
   };
 
   const userRoleId = user?.role?.id;
 
   const visibleNavigation = userRoleId === SUPER_ADMIN_ROLE_ID || userRoleId === ROLES.ADMIN
-  ? navigation
-  : navigation.filter(item => 
+  ? navigationLinks
+  : navigationLinks.filter(item => 
       userRoleId && rolePermissions[userRoleId]?.includes(item.permission)
     );
 

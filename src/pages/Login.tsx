@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { Package, Loader2 } from "lucide-react";
 
-export default function Auth() {
+export default function Login() {
   const navigate = useNavigate();
   const { user, signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
